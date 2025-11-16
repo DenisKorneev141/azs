@@ -1,3 +1,8 @@
+//git add .
+//git commit -m "Описание изменений"
+//git push
+
+
 package com.azs;
 
 import java.util.Scanner;
@@ -22,6 +27,7 @@ public class MainServer {
             System.out.println("\t2. Управление операторами");
             System.out.println("\t3. Управление пользователями");
             System.out.println("\t4. Управление АЗС");
+            System.out.println("\t5. Разработчик");
             System.out.print("-> ");
 
             String choice = scanner.next();
@@ -39,6 +45,17 @@ public class MainServer {
                 case "4":
                    showAZSMenu();
                     break;
+                case "5":
+                    while (true){
+                        System.out.print(">> ");
+                        String command = scanner.nextLine();
+
+                        if(command.equals("exit")){
+                            break;
+                        }
+
+                        System.out.println(ServerManager.executeCommand(command));
+                    }
                 default:
                     System.out.println("Ошибка: неверный выбор!");
             }
@@ -105,10 +122,44 @@ public class MainServer {
                     System.out.println(operators);
                     break;
                 case "2":
-                    //newOperator();
+                    scanner.nextLine();
+                    System.out.print("Введите логин (Электронную почту) оператора: ");
+                    String operator_username = scanner.nextLine();
+                    String operator_password = "  ";
+                    while(operator_password.equals("  ")) {
+                        System.out.print("Пароль сгенерировать автоматически? (1 - да, 2 - нет): ");
+                        int password_choice = Integer.parseInt(scanner.nextLine());
+
+                        switch (password_choice) {
+                            case 1:
+                                operator_password = ServerManager.generateRandomString();
+                                System.out.println(operator_password);
+                                break;
+                            case 2:
+                                System.out.print("Введите пароль: ");
+                                operator_password = scanner.nextLine();
+                                break;
+                            default:
+                                System.out.println("Вы выбрали неверный вариант!");
+                                break;
+                        }
+                    }
+
+                    System.out.print("Введите ФИО оператора: ");
+                    String operator_name = scanner.nextLine();
+
+                    System.out.println(ServerManager.showAZS());
+                    System.out.print("Укажите ID заправки на которой будет работать новый оператор: ");
+                    int operatorAZSId = scanner.nextInt();
+                    String newOperatorResult = ServerManager.createOperator(operator_username, operator_password, operator_name, operatorAZSId);
+                    System.out.println(newOperatorResult);
+
                     break;
                 case "3":
-                    //deleteOperator();
+                    System.out.println(ServerManager.showOperators());
+                    System.out.print("Выберите ID оператора. которого хотите удалить: ");
+                    int delOperatorId = scanner.nextInt();
+                    System.out.println(ServerManager.deleteOperator(delOperatorId));
                     break;
                 case "4":
                     showMainMenu();
@@ -131,10 +182,13 @@ public class MainServer {
 
             switch (choice){
                 case "1":
-                    //showUsers();
+                    System.out.println(ServerManager.showUSers());
                     break;
                 case "2":
-                    //deleteUser();
+                    System.out.println(ServerManager.showUSers());
+                    System.out.print("Выберите ID пользователя, которого хотите удалить: ");
+                    int deleteUserChoice = scanner.nextInt();
+                    System.out.println(ServerManager.deleteUser(deleteUserChoice));
                     break;
                 case "3":
                     showMainMenu();

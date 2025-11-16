@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.sql.*;
 import java.util.Scanner;
+import org.mindrot.jbcrypt.BCrypt;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ServerManager{
@@ -242,5 +243,188 @@ public class ServerManager{
             return "Ошибка при получении списка операторов: " + e.getMessage();
         }
 
+    }
+
+    public static String createOperator(String operator_username, String operator_password, String operator_name, int operatorAZSId){
+        try {
+            Connection conn = getConnection();
+            Statement stmt = conn.createStatement();
+
+            String newPassword = hashPassword(operator_password);
+            String sql = "INSERT INTO operators (username, password_hash, name, place) " +
+                    "VALUES ('" + operator_username + "', '" + newPassword + "', '" + operator_name + "', '" + operatorAZSId + "')";
+            int rowsAffected = stmt.executeUpdate(sql);
+            stmt.close();
+
+            if (rowsAffected > 0) {
+                return "Оператор " + operator_name + " успешно добавлен!";
+            } else {
+                return "Ошибка: не удалось добавить  оператора АЗС!";
+            }
+
+        } catch (SQLException e){
+            return "Ошибка при добавлении оператора АЗС: " + e.getMessage();
+        }
+
+
+    }
+
+    public static String deleteOperator(int deleteOperatorId){
+        try {
+            Connection conn = getConnection();
+            String checkSql = "SELECT id FROM operators WHERE id = ?" ;
+            PreparedStatement checkStmt = conn.prepareStatement(checkSql);
+            checkStmt.setInt(1, deleteOperatorId);
+            ResultSet rs = checkStmt.executeQuery();
+
+            if(!rs.next()){
+                return "Ошибка: оператор с ID: " + deleteOperatorId + " не найден!";
+            }
+
+            String deleteSql = "DELETE FROM operators WHERE id = ?";
+            PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
+            deleteStmt.setInt(1, deleteOperatorId);
+            int rowsAffected = deleteStmt.executeUpdate();
+
+            checkStmt.close();
+            deleteStmt.close();
+
+            if(rowsAffected > 0){
+                return "Оператор с ID: " + deleteOperatorId + " удален!";
+            } else {
+                return "Ошибка при удалении оператора!";
+            }
+
+
+
+        }catch (Exception e){
+            return "Ошибка: " + e.getMessage();
+        }
+    }
+
+    public static String showUSers(){
+        try {
+            Connection conn = getConnection();
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery("SELECT id, username, phone, name, balance, total_spent, total_liters FROM users ORDER BY id");
+
+            StringBuilder result = new StringBuilder();
+            result.append("Список всех пользователей:\n\n");
+
+            while (rs.next()){
+                int id = rs.getInt("id");
+                String name = rs.getString("name");
+                String username = rs.getString("username");
+                String phone = rs.getString("phone");
+                Double balance = rs.getDouble("balance");
+                Double total_spent = rs.getDouble("total_spent");
+                Double total_liters = rs.getDouble("total_liters");
+
+                result.append("\t\t[ID: ").append(id).append("]\nФИО: ")
+                        .append(name).append("\n>Юзернейм: ").append(username).append("\nНомер телефона: ").append(phone).append("\nБаланс бонусов: ").append(balance).append("руб.").append("\nВсего потрачено: ").append(total_spent).append("руб").append("\nВсего заправлено: ").append(total_liters).append("л.").append("\n\n");
+            }
+
+            rs.close();
+            stmt.close();
+
+            return result.toString();
+
+        } catch (SQLException e) {
+            return "Ошибка при получении списка пользователей: " + e.getMessage();
+        }
+
+    }
+
+    public static String deleteUser(int choice){
+        try {
+            Connection conn = getConnection();
+            String checkSql = "SELECT id FROM users WHERE id = ?" ;
+            PreparedStatement checkStmt = conn.prepareStatement(checkSql);
+            checkStmt.setInt(1, choice);
+            ResultSet rs = checkStmt.executeQuery();
+
+            if(!rs.next()){
+                return "Ошибка: пользователь с ID: " + choice + " не найден!";
+            }
+
+            String deleteSql = "DELETE FROM users WHERE id = ?";
+            PreparedStatement deleteStmt = conn.prepareStatement(deleteSql);
+            deleteStmt.setInt(1, choice);
+            int rowsAffected = deleteStmt.executeUpdate();
+
+            checkStmt.close();
+            deleteStmt.close();
+
+            if(rowsAffected > 0){
+                return "Пользователь с ID: " + choice + " удален!";
+            } else {
+                return "Ошибка при удалении пользователя!";
+            }
+
+
+
+        }catch (Exception e){
+            return "Ошибка: " + e.getMessage();
+        }
+    }
+
+    public static String executeCommand(String command){
+        if (command.isEmpty()) return "";
+
+        switch (command){
+            case "start":
+                startServer();
+                break;
+            case "stop":
+                stopServer();
+                break;
+            case "operators":
+                System.out.println(showOperators());
+                break;
+            case "new operator":
+                System.out.println(createOperator("testUsername", "test_password", "Иванов Иван Иванович", 1));
+                break;
+            case "users":
+                System.out.println(showUSers());
+                break;
+            case "azs":
+                System.out.println(showAZS());
+                break;
+            case "new azs":
+                System.out.println(newAZS("Тестовая заправка", "г. Минск, ул. Минская, д.1", 4));
+                break;
+            case "price":
+                System.out.println(getFuelPrices());
+                break;
+            case "restart":
+                stopServer();
+                startServer();
+                break;
+            case "status":
+                showStatus();
+                break;
+            case "help":
+                System.out.println("Команды:\n\t1. start / stop / restart / status - команды управления сервером\n\t2. operator / new operator / users - управление пользователями\n\t3. azs / new azs / price - управление АЗС");
+                break;
+        }
+
+        return " ";
+    }
+
+    public static String hashPassword(String plainPassword) {
+        return BCrypt.hashpw(plainPassword, BCrypt.gensalt());
+    }
+
+    public static String generateRandomString() {
+        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        int length = 10;
+        StringBuilder result = new StringBuilder();
+
+        for (int i = 0; i < length; i++) {
+            int index = (int) (Math.random() * characters.length());
+            result.append(characters.charAt(index));
+        }
+
+        return result.toString();
     }
 }
