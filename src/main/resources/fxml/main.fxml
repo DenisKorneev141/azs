@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane minHeight="1080.0" minWidth="1920.0" prefHeight="800" prefWidth="1200" stylesheets="@../styles/main.css" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.azs.controller.MainController">
+    
+    <!-- TOP: Шапка с информацией -->
+    <top>
+        <VBox prefHeight="142.0" prefWidth="1920.0" spacing="10" style="-fx-background-color: #2c3e50;">
+            <HBox alignment="CENTER_LEFT" maxHeight="0.0" prefHeight="0.0" prefWidth="1878.0" spacing="20" style="-fx-padding: 15 20 10 20;">
+                <!-- Логотип и название -->
+                <HBox alignment="CENTER_LEFT" spacing="15">
+               <ImageView fitHeight="70.0" fitWidth="255.0" pickOnBounds="true" preserveRatio="true">
+                  <image>
+                     <Image url="@../images/Logo_white.png" />
+                  </image>
+               </ImageView>
+                    <ImageView fitHeight="40" fitWidth="40" preserveRatio="true">
+                        <Image url="@../images/azs_logo.png" />
+                    </ImageView>
+                    <VBox spacing="2" />
+                </HBox>
+                
+                   <!-- Время и действия -->
+                <HBox alignment="TOP_RIGHT" maxWidth="1500.0" prefHeight="81.0" prefWidth="1500.0" spacing="15" HBox.hgrow="ALWAYS">
+                     <Label prefHeight="51.0" prefWidth="370.0" style="-fx-text-fill: white; -fx-font-size: 28px; -fx-font-weight: bold;" text="Система управления АЗС">
+                  <font>
+                     <Font name="Tahoma" size="32.0" />
+                  </font>
+               </Label>
+                     <Label fx:id="currentAzsLabel" alignment="CENTER" prefHeight="51.0" prefWidth="205.0" style="-fx-text-fill: #ecf0f1; -fx-font-size: 17px;" text="АЗС №1 Центральная">
+                  <font>
+                     <Font name="Tahoma" size="12.0" />
+                  </font>
+               </Label>
+                   
+                      <!-- Информация о смене -->
+                   <HBox alignment="CENTER" spacing="30" style="-fx-padding: 0 0 0 50;">
+                       <VBox alignment="CENTER" spacing="2">
+                           <Label style="-fx-text-fill: #bdc3c7; -fx-font-size: 11px;" text="ОПЕРАТОР" />
+                           <Label fx:id="operatorNameLabel" style="-fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold;" text="Иванов Иван" />
+                       </VBox>
+                       <VBox alignment="CENTER" spacing="2" />
+                       <VBox alignment="CENTER" spacing="2">
+                           <Label prefHeight="16.0" prefWidth="65.0" style="-fx-text-fill: #bdc3c7; -fx-font-size: 11px;" text="КАССА" />
+                           <Label fx:id="cashAmountLabel" prefHeight="20.0" prefWidth="74.0" style="-fx-text-fill: #2ecc71; -fx-font-size: 14px; -fx-font-weight: bold;" text="5 000 ₽" />
+                       </VBox>
+                   </HBox>
+                    <Label fx:id="currentTimeLabel" prefHeight="50.0" prefWidth="120.0" style="-fx-text-fill: #ecf0f1; -fx-font-size: 15px;" text="14:30 15.01.2024">
+                  <font>
+                     <Font name="Tahoma Bold" size="20.0" />
+                  </font>
+               </Label>
+                    <Button prefHeight="52.0" prefWidth="123.0" style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 5 15; -fx-border-radius: 20; -fx-background-radius: 10;" text="Выход">
+                  <font>
+                     <Font name="Tahoma Bold" size="17.0" />
+                  </font>
+               </Button>
+                </HBox>
+            </HBox>
+            
+            <!-- Навигационные вкладки -->
+            <TabPane prefHeight="61.0" prefWidth="1920.0" style="-fx-background-color: transparent; -fx-border-width: 0; -fx-font-size: 16;" tabClosingPolicy="UNAVAILABLE">
+                <tabs>
+                    <Tab text="🏠 Продажи">
+                        <content>
+                            <!-- Контент будет загружаться динамически -->
+                        </content>
+                    </Tab>
+                    <Tab text="⛽ Колонки">
+                        <content>
+                            <!-- Контент будет загружаться динамически -->
+                        </content>
+                    </Tab>
+                    <Tab text="💰 Цены">
+                        <content>
+                            <!-- Контент будет загружаться динамически -->
+                        </content>
+                    </Tab>
+                    <Tab text="📊 Отчеты">
+                        <content>
+                            <!-- Контент будет загружаться динамически -->
+                        </content>
+                    </Tab>
+                </tabs>
+            </TabPane>
+        </VBox>
+    </top>
+
+    <!-- CENTER: Основная рабочая область -->
+    <center>
+        <StackPane fx:id="mainContentPane" prefHeight="902.0" prefWidth="1920.0">
+            <!-- Здесь будет динамически загружаться контент вкладок -->
+            
+            <!-- Стартовый экран - быстрый доступ -->
+            <VBox alignment="CENTER" prefHeight="923.0" prefWidth="1920.0" spacing="30" style="-fx-padding: 50;">
+                <Label prefHeight="53.0" prefWidth="602.0" style="-fx-font-size: 48px; -fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="Добро пожаловать, Иван" />
+                
+                <HBox alignment="BASELINE_CENTER" prefHeight="390.0" prefWidth="1819.0" spacing="30">
+               <children>
+                  <VBox alignment="CENTER" prefHeight="380.0" prefWidth="440.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+                     <children>
+                        <Label style="-fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="🚀 Быстрая продажа" />
+                        <Button prefHeight="56.0" prefWidth="272.0" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 12 25; -fx-background-radius: 8;" text="Новая продажа">
+                           <font>
+                              <Font size="23.0" />
+                           </font>
+                        </Button>
+                        <Button prefHeight="39.0" prefWidth="185.0" style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-padding: 10 20; -fx-background-radius: 6;" text="История продаж" />
+                     </children>
+                  </VBox>
+                  <VBox alignment="CENTER" prefHeight="380.0" prefWidth="440.0" spacing="15" style="-fx-padding: 20; -fx-margin: 30; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+                     <children>
+                        <Label style="-fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="📈 Сегодня" />
+                        <Label fx:id="todaySalesLabel" style="-fx-font-size: 27px; -fx-font-style: Italic; -fx-text-fill: #27ae60; -fx-font-weight: bold;" text="12 450 BYN" />
+                        <Label fx:id="todayTransactionsLabel" style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" text="24 транзакции" />
+                        <Label fx:id="todayLitersLabel" style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" text="280.5 литров" />
+                     </children>
+                  </VBox>
+                  <VBox alignment="CENTER" minHeight="380.0" minWidth="440.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+                     <children>
+                        <Label style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="⛽ Колонки" />
+                        <Label fx:id="activeNozzlesLabel" style="-fx-font-size: 30; -fx-text-fill: #3498db; -fx-font-weight: bold;" text="3/4 активны" />
+                        <ProgressBar fx:id="nozzlesProgress" prefHeight="18.0" prefWidth="218.0" progress="0.67" style="-fx-accent: #3498db; -fx-pref-width: 200;" />
+                        <Button prefHeight="56.0" prefWidth="218.0" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6;" text="Управление">
+                           <font>
+                              <Font name="Tahoma Bold" size="23.0" />
+                           </font>
+                        </Button>
+                     </children>
+                  </VBox>
+               </children>
+                </HBox>
+                
+                <!-- Последние транзакции -->
+                <VBox spacing="10" style="-fx-padding: 20; -fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #bdc3c7; -fx-border-width: 1; -fx-border-radius: 10;">
+                    <Label style="-fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="🕐 Последние операции" />
+                    <TableView fx:id="recentTransactionsTable" prefHeight="150" style="-fx-border-width: 0; -fx-font-size: 20;">
+                        <columns>
+                            <TableColumn prefWidth="100" text="Время" />
+                            <TableColumn prefWidth="120" text="Топливо" />
+                            <TableColumn prefWidth="80" text="Литры" />
+                            <TableColumn prefWidth="100" text="Сумма" />
+                            <TableColumn prefWidth="120" text="Способ" />
+                        </columns>
+                  <columnResizePolicy>
+                     <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                  </columnResizePolicy>
+                    </TableView>
+                </VBox>
+            </VBox>
+        </StackPane>
+    </center>
+
+    <!-- BOTTOM: Статус бар -->
+    <bottom>
+        <HBox alignment="CENTER_LEFT" spacing="20" style="-fx-background-color: #34495e; -fx-padding: 8 15;">
+            <Label fx:id="statusLabel" style="-fx-text-fill: #ecf0f1; -fx-font-size: 12px;" text="Сеть автозаправочных станций PHAETON" />
+            <HBox alignment="CENTER_RIGHT" spacing="10" HBox.hgrow="ALWAYS">
+                <Label style="-fx-text-fill: #bdc3c7; -fx-font-size: 11px;" text="Сервер:" />
+                <Label fx:id="serverStatusLabel" style="-fx-text-fill: #2ecc71; -fx-font-size: 11px;" text="🟢 Online" />
+            </HBox>
+        </HBox>
+    </bottom>
+
+</BorderPane>

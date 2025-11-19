@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="1000.0" prefWidth="1000.0" style="-fx-background-color: #ffffff;" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1">
+   <top>
+      <ImageView fitHeight="600.0" fitWidth="660.0" pickOnBounds="true" preserveRatio="true" BorderPane.alignment="CENTER">
+         <image>
+            <Image url="@../images/qr.png" />
+         </image>
+      </ImageView>
+   </top>
+   <bottom>
+      <VBox prefHeight="437.0" prefWidth="1000.0" BorderPane.alignment="CENTER">
+         <children>
+            <Label alignment="CENTER" prefHeight="49.0" prefWidth="1000.0" style="-fx-text-fill: #2c3e50;" text="АЗС №1 г. Минск, проспект Партизанский, д.44А">
+               <font>
+                  <Font name="Tahoma Bold" size="23.0" />
+               </font>
+            </Label>
+            <Label alignment="CENTER" prefHeight="44.0" prefWidth="1000.0" style="-fx-text-fill: #2c3e50;" text="Колонка 3">
+               <font>
+                  <Font name="Tahoma Bold" size="23.0" />
+               </font>
+            </Label>
+            <Label alignment="CENTER" prefHeight="50.0" prefWidth="1000.0" style="-fx-text-fill: #2c3e50;" text="АИ - 92, АИ - 95, АИ - 98, АИ - 100, ДТ - К5">
+               <font>
+                  <Font name="Tahoma Bold" size="23.0" />
+               </font>
+            </Label>
+            <Pane prefHeight="79.0" prefWidth="1000.0" />
+            <BorderPane prefHeight="81.0" prefWidth="1000.0">
+               <center>
+                  <Button prefHeight="45.0" prefWidth="378.0" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6;" text="Распечать QR - код" BorderPane.alignment="CENTER">
+                     <font>
+                        <Font name="Tahoma Bold" size="23.0" />
+                     </font>
+                  </Button>
+               </center>
+            </BorderPane>
+            <BorderPane prefHeight="76.0" prefWidth="1000.0">
+               <center>
+                  <Button prefHeight="52.0" prefWidth="123.0" style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 5 15; -fx-border-radius: 20; -fx-background-radius: 10;" text="Выход" BorderPane.alignment="CENTER">
+                     <font>
+                        <Font name="Tahoma Bold" size="17.0" />
+                     </font>
+                  </Button>
+               </center>
+            </BorderPane>
+         </children>
+      </VBox>
+   </bottom>
+</BorderPane>

@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane minHeight="1080.0" minWidth="1920.0" prefHeight="800" prefWidth="1200" stylesheets="@../styles/main.css" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.azs.controller.PriceController">
+
+    <!-- TOP: Шапка с информацией -->
+    <top>
+        <VBox prefHeight="121.0" prefWidth="1920.0" spacing="10" style="-fx-background-color: #2c3e50;">
+            <HBox alignment="CENTER_LEFT" spacing="20" style="-fx-padding: 15 20 10 20;">
+                <!-- Логотип и название -->
+                <HBox alignment="CENTER_LEFT" spacing="15">
+                    <ImageView fitHeight="150.0" fitWidth="200.0" pickOnBounds="true" preserveRatio="true">
+                        <image>
+                            <Image url="@../images/Logo_white.png" />
+                        </image>
+                    </ImageView>
+                    <VBox spacing="2" />
+                </HBox>
+
+                <!-- Время и действия -->
+                <HBox alignment="TOP_RIGHT" maxWidth="1500.0" prefHeight="58.0" prefWidth="1329.0" spacing="15" HBox.hgrow="ALWAYS">
+                    <Label prefHeight="51.0" prefWidth="796.0" style="-fx-text-fill: white; -fx-font-size: 28px; -fx-font-weight: bold;" text="Система управления АЗС | Текущие цены">
+                        <font>
+                            <Font name="Tahoma" size="32.0" />
+                        </font>
+                    </Label>
+
+                    <!-- Информация о смене -->
+                    <HBox alignment="CENTER" spacing="30" style="-fx-padding: 0 0 0 50;">
+                        <VBox alignment="CENTER" spacing="2" />
+                        <VBox alignment="CENTER" spacing="2" />
+                        <VBox alignment="CENTER" spacing="2" />
+                    </HBox>
+
+                    <Label fx:id="currentTimeLabel" prefHeight="50.0" prefWidth="120.0" style="-fx-text-fill: #ecf0f1; -fx-font-size: 15px;" text="14:30 15.01.2024">
+                        <font>
+                            <Font name="Tahoma Bold" size="20.0" />
+                        </font>
+                    </Label>
+
+                    <Button prefHeight="52.0" prefWidth="123.0" style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 5 15; -fx-border-radius: 20; -fx-background-radius: 10;" text="Выход">
+                        <font>
+                            <Font name="Tahoma Bold" size="17.0" />
+                        </font>
+                    </Button>
+                </HBox>
+            </HBox>
+
+            <!-- Навигационные вкладки -->
+            <TabPane prefHeight="83.0" prefWidth="1920.0" style="-fx-background-color: transparent; -fx-border-width: 0; -fx-font-size: 16;" tabClosingPolicy="UNAVAILABLE">
+                <tabs>
+                    <Tab text="🏠 Продажи" />
+                    <Tab text="⛽ Колонки" />
+                    <Tab text="💰 Цены" />
+                    <Tab text="📊 Отчеты" />
+                </tabs>
+            </TabPane>
+        </VBox>
+    </top>
+
+    <!-- CENTER: Основная рабочая область -->
+    <center>
+        <StackPane fx:id="mainContentPane" prefHeight="902.0" prefWidth="1920.0">
+            <VBox alignment="CENTER" prefHeight="890.0" prefWidth="1920.0" spacing="30" style="-fx-padding: 50;">
+                <Label prefHeight="70.0" prefWidth="685.0" style="-fx-font-size: 48px; -fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="Текущие цены на топливо" />
+
+                <HBox alignment="BASELINE_CENTER" prefHeight="390.0" prefWidth="1819.0" spacing="30">
+                    <!-- АИ-92 -->
+                    <VBox alignment="CENTER" prefHeight="380.0" prefWidth="300.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+                        <Label style="-fx-text-fill: #2c3e50; -fx-font-size: 30; -fx-font-weight: bold;" text="⛽ АИ-92" />
+                        <Label fx:id="ai92Price" style="-fx-font-size: 36px; -fx-text-fill: #e67e22; -fx-font-weight: bold;" text="2.50 BYN" />
+                        <Label style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" text="за литр" />
+                    </VBox>
+
+                       <!-- АИ-95 -->
+                    <VBox alignment="CENTER" prefHeight="380.0" prefWidth="300.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+                        <Label style="-fx-text-fill: #2c3e50; -fx-font-size: 30; -fx-font-weight: bold;" text="⛽ АИ-95" />
+                        <Label fx:id="ai95Price" style="-fx-font-size: 36px; -fx-text-fill: #e67e22; -fx-font-weight: bold;" text="2.60 BYN" />
+                        <Label style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" text="за литр" />
+                    </VBox>
+
+                    <!-- АИ-98 -->
+                    <VBox alignment="CENTER" prefHeight="380.0" prefWidth="300.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+                        <Label style="-fx-text-fill: #2c3e50; -fx-font-size: 30; -fx-font-weight: bold;" text="⛽ АИ-98" />
+                        <Label fx:id="ai98Price" style="-fx-font-size: 36px; -fx-text-fill: #e67e22; -fx-font-weight: bold;" text="2.83 BYN" />
+                        <Label style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" text="за литр" />
+                    </VBox>
+
+                    <!-- АИ-100 -->
+                    <VBox alignment="CENTER" prefHeight="380.0" prefWidth="300.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+                        <Label style="-fx-text-fill: #2c3e50; -fx-font-size: 30; -fx-font-weight: bold;" text="⛽ АИ-100" />
+                        <Label fx:id="ai100Price" style="-fx-font-size: 36px; -fx-text-fill: #e67e22; -fx-font-weight: bold;" text="2.93 BYN" />
+                        <Label style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" text="за литр" />
+                    </VBox>
+                </HBox>
+
+                <!-- ДТ-К5 -->
+                <VBox alignment="CENTER" prefHeight="200.0" prefWidth="600.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+                    <Label style="-fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="⛽ ДТ-К5" />
+                    <Label fx:id="dtk5Price" style="-fx-font-size: 36px; -fx-text-fill: #e67e22; -fx-font-weight: bold;" text="2.60 BYN" />
+                    <Label style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" text="за литр" />
+                </VBox>
+
+                <!-- Информация -->
+                <VBox alignment="CENTER" spacing="10" style="-fx-padding: 20;">
+                    <Label style="-fx-font-size: 16px; -fx-text-fill: #7f8c8d;" text="Цены фиксированные и обновляются администратором" />
+                </VBox>
+            </VBox>
+        </StackPane>
+    </center>
+
+    <!-- BOTTOM: Статус бар -->
+    <bottom>
+        <HBox alignment="CENTER_LEFT" spacing="20" style="-fx-background-color: #34495e; -fx-padding: 8 15;">
+            <Label fx:id="statusLabel" style="-fx-text-fill: #ecf0f1; -fx-font-size: 12px;" text="Сеть автозаправочных станций PHAETON" />
+            <HBox alignment="CENTER_RIGHT" spacing="10" HBox.hgrow="ALWAYS">
+                <Label style="-fx-text-fill: #bdc3c7; -fx-font-size: 11px;" text="Сервер:" />
+                <Label fx:id="serverStatusLabel" style="-fx-text-fill: #2ecc71; -fx-font-size: 11px;" text="🟢 Online" />
+            </HBox>
+        </HBox>
+    </bottom>
+</BorderPane>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.text.Font?>
+
+<Pane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="1080.0" minWidth="1920.0" prefHeight="400.0" prefWidth="600.0" style="-fx-background-color: #FFFFFF;" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <Pane layoutX="590.0" layoutY="-14.0" prefHeight="1094.0" prefWidth="1332.0" style="-fx-background-color: linear-gradient(to bottom, #ff8601, #e67e22);">
+         <children>
+            <Label layoutX="179.0" layoutY="243.0" text="Авторизация" textFill="WHITE">
+               <font>
+                  <Font name="vivo Sans Global Heavy" size="66.0" />
+               </font>
+            </Label>
+            <Label layoutX="184.0" layoutY="334.0" text="Авторизируйтесь в системе чтобы продолжить" textFill="WHITE">
+               <font>
+                  <Font name="vivo Sans Global Extrabold" size="37.0" />
+               </font>
+            </Label>
+            <TextField layoutX="176.0" layoutY="471.0" prefHeight="73.0" prefWidth="715.0" promptText="👤 Логин" style="-fx-background-radius: 20;">
+               <font>
+                  <Font size="31.0" />
+               </font>
+            </TextField>
+            <PasswordField layoutX="177.0" layoutY="561.0" prefHeight="73.0" prefWidth="713.0" promptText="🔑 Пароль" style="-fx-background-radius: 20;">
+               <font>
+                  <Font size="31.0" />
+               </font>
+            </PasswordField>
+            <Button layoutX="181.0" layoutY="694.0" mnemonicParsing="false" prefHeight="95.0" prefWidth="714.0" style="-fx-background-color: #ffffff; -fx-background-radius: 20;" text="Войти">
+               <font>
+                  <Font name="vivo Sans Global Heavy" size="29.0" />
+               </font>
+            </Button>
+            <Label layoutX="62.0" layoutY="1004.0" text="Возникли проблемы со входом? Проверьте правильность введенного логина и пароля. По всем вопросам обращайтесь к администратору АЗС" textFill="#d3cece">
+               <font>
+                  <Font name="System Italic" size="18.0" />
+               </font>
+            </Label>
+            <Label layoutX="64.0" layoutY="1031.0" text="Контакты администратора: Корнеев Денис Александрович, +375(33)600-99-20, deniskorneev141@gmail.com" textFill="#d3cece">
+               <font>
+                  <Font name="System Italic" size="18.0" />
+               </font>
+            </Label>
+         </children>
+      </Pane>
+      <ImageView fitHeight="117.0" fitWidth="633.0" layoutX="50.0" layoutY="48.0" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../images/Logo_black.png" />
+         </image>
+      </ImageView>
+      <ImageView fitHeight="470.0" fitWidth="586.0" layoutX="-1.0" layoutY="610.0" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../images/login_window.jpg" />
+         </image>
+      </ImageView>
+      <Label layoutX="25.0" layoutY="273.0" text="Добро пожаловать!">
+         <font>
+            <Font name="vivo Sans Global Heavy" size="53.0" />
+         </font>
+      </Label>
+      <Label layoutX="15.0" layoutY="363.0" text="Система управления АЗС">
+         <font>
+            <Font name="vivo Sans Global Heavy" size="43.0" />
+         </font>
+      </Label>
+   </children>
+</Pane>
