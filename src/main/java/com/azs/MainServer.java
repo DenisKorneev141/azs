@@ -182,10 +182,10 @@ public class MainServer {
 
             switch (choice){
                 case "1":
-                    System.out.println(ServerManager.showUSers());
+                    System.out.println(ServerManager.showUsers());
                     break;
                 case "2":
-                    System.out.println(ServerManager.showUSers());
+                    System.out.println(ServerManager.showUsers());
                     System.out.print("Выберите ID пользователя, которого хотите удалить: ");
                     int deleteUserChoice = scanner.nextInt();
                     System.out.println(ServerManager.deleteUser(deleteUserChoice));

@@ -10,8 +10,7 @@ import java.sql.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.mindrot.jbcrypt.BCrypt;
 
-
-public class ServerManager{
+public class ServerManager {
     private static HttpServer server;
     private static Connection connection;
     private static final AtomicBoolean isRunning = new AtomicBoolean(false);
@@ -19,20 +18,20 @@ public class ServerManager{
     private static final Gson gson = new Gson();
 
     public static void startServer() {
-        if(isRunning.get()){
+        if (isRunning.get()) {
             System.out.println("Ошибка: сервер уже запущен!");
             return;
         }
 
-        try{
+        try {
             server = HttpServer.create(new InetSocketAddress("0.0.0.0", PORT), 0);
 
+            // API эндпоинты
             server.createContext("/api/auth", new AuthHandler());
             server.createContext("/api/azs", new AzsHandler());
             server.createContext("/api/fuel", new FuelHandler());
             server.createContext("/api/operators", new OperatorsHandler());
             server.createContext("/api/users", new UsersHandler());
-
 
             server.setExecutor(null);
             server.start();
@@ -40,50 +39,268 @@ public class ServerManager{
 
             System.out.println("✅ Сервер запущен на порту: " + PORT);
             System.out.println("🌐 Доступ по: http://localhost:" + PORT);
-            System.out.println("🌐 Или по вашему IP: http://[ваш_ip]:" + PORT);
             connectToDatabase();
-        } catch (IOException e){
+        } catch (IOException e) {
             System.err.println("❌ Ошибка запуска сервера: " + e.getMessage());
         }
     }
 
+    // ========== ОБРАБОТЧИК АВТОРИЗАЦИИ ==========
+    static class AuthHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"POST".equals(exchange.getRequestMethod())) {
+                sendError(exchange, 405, "Метод не поддерживается");
+                return;
+            }
 
+            try {
+                String requestBody = readRequestBody(exchange);
+                JsonObject json = gson.fromJson(requestBody, JsonObject.class);
 
-    public static void stopServer(){
-        if(!isRunning.get()){
+                String username = json.get("username").getAsString();
+                String password = json.get("password").getAsString();
+
+                JsonObject response = new JsonObject();
+                boolean authenticated = authenticateUser(username, password);
+
+                if (authenticated) {
+                    String role = getUserRole(username);
+                    response.addProperty("success", true);
+                    response.addProperty("message", "Авторизация успешна");
+                    response.addProperty("username", username);
+                    response.addProperty("role", role);
+                    System.out.println("✅ Успешный вход: " + username);
+                } else {
+                    response.addProperty("success", false);
+                    response.addProperty("message", "Неверный логин или пароль");
+                    System.out.println("❌ Неудачная попытка входа: " + username);
+                }
+
+                sendJsonResponse(exchange, 200, response);
+
+            } catch (Exception e) {
+                sendError(exchange, 500, "Ошибка сервера: " + e.getMessage());
+            }
+        }
+    }
+
+    // ========== ОБРАБОТЧИК АЗС ==========
+    static class AzsHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            try {
+                if ("GET".equals(exchange.getRequestMethod())) {
+                    JsonArray azsList = new JsonArray();
+                    String sql = "SELECT id, name, address, nozzle_count FROM azs ORDER BY id";
+
+                    try (Statement stmt = getConnection().createStatement();
+                         ResultSet rs = stmt.executeQuery(sql)) {
+
+                        while (rs.next()) {
+                            JsonObject azs = new JsonObject();
+                            azs.addProperty("id", rs.getInt("id"));
+                            azs.addProperty("name", rs.getString("name"));
+                            azs.addProperty("address", rs.getString("address"));
+                            azs.addProperty("nozzle_count", rs.getInt("nozzle_count"));
+                            azsList.add(azs);
+                        }
+                    }
+
+                    JsonObject response = new JsonObject();
+                    response.addProperty("success", true);
+                    response.add("data", azsList);
+                    sendJsonResponse(exchange, 200, response);
+
+                } else if ("POST".equals(exchange.getRequestMethod())) {
+                    String requestBody = readRequestBody(exchange);
+                    JsonObject json = gson.fromJson(requestBody, JsonObject.class);
+
+                    String name = json.get("name").getAsString();
+                    String address = json.get("address").getAsString();
+                    int nozzle = json.get("nozzle_count").getAsInt();
+
+                    String result = newAZS(name, address, nozzle);
+                    JsonObject response = new JsonObject();
+                    response.addProperty("success", true);
+                    response.addProperty("message", result);
+
+                    sendJsonResponse(exchange, 201, response);
+                } else {
+                    sendError(exchange, 405, "Метод не поддерживается");
+                }
+            } catch (Exception e) {
+                sendError(exchange, 500, "Ошибка: " + e.getMessage());
+            }
+        }
+    }
+
+    // ========== ОБРАБОТЧИК ТОПЛИВА ==========
+    static class FuelHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            try {
+                JsonArray fuelList = new JsonArray();
+                String sql = "SELECT id, name, price FROM fuels ORDER BY id";
+
+                try (Statement stmt = getConnection().createStatement();
+                     ResultSet rs = stmt.executeQuery(sql)) {
+
+                    while (rs.next()) {
+                        JsonObject fuel = new JsonObject();
+                        fuel.addProperty("id", rs.getInt("id"));
+                        fuel.addProperty("name", rs.getString("name"));
+                        fuel.addProperty("price", rs.getDouble("price"));
+                        fuelList.add(fuel);
+                    }
+                }
+
+                JsonObject response = new JsonObject();
+                response.addProperty("success", true);
+                response.add("data", fuelList);
+                sendJsonResponse(exchange, 200, response);
+
+            } catch (Exception e) {
+                sendError(exchange, 500, "Ошибка: " + e.getMessage());
+            }
+        }
+    }
+
+    // ========== ОБРАБОТЧИК ОПЕРАТОРОВ ==========
+    static class OperatorsHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            try {
+                JsonArray operatorsList = new JsonArray();
+                String sql = "SELECT o.id, o.username, o.name, o.role, " +
+                        "a.name as azs_name, a.address as azs_address " +
+                        "FROM operators o LEFT JOIN azs a ON o.place = a.id " +
+                        "ORDER BY o.id";
+
+                try (Statement stmt = getConnection().createStatement();
+                     ResultSet rs = stmt.executeQuery(sql)) {
+
+                    while (rs.next()) {
+                        JsonObject operator = new JsonObject();
+                        operator.addProperty("id", rs.getInt("id"));
+                        operator.addProperty("username", rs.getString("username"));
+                        operator.addProperty("name", rs.getString("name"));
+                        operator.addProperty("role", rs.getString("role"));
+                        operator.addProperty("azs_name", rs.getString("azs_name"));
+                        operator.addProperty("azs_address", rs.getString("azs_address"));
+                        operatorsList.add(operator);
+                    }
+                }
+
+                JsonObject response = new JsonObject();
+                response.addProperty("success", true);
+                response.add("data", operatorsList);
+                sendJsonResponse(exchange, 200, response);
+
+            } catch (Exception e) {
+                sendError(exchange, 500, "Ошибка: " + e.getMessage());
+            }
+        }
+    }
+
+    // ========== ОБРАБОТЧИК ПОЛЬЗОВАТЕЛЕЙ ==========
+    static class UsersHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            try {
+                JsonArray usersList = new JsonArray();
+                String sql = "SELECT id, username, phone, name, balance, " +
+                        "total_spent, total_liters FROM users ORDER BY id";
+
+                try (Statement stmt = getConnection().createStatement();
+                     ResultSet rs = stmt.executeQuery(sql)) {
+
+                    while (rs.next()) {
+                        JsonObject user = new JsonObject();
+                        user.addProperty("id", rs.getInt("id"));
+                        user.addProperty("username", rs.getString("username"));
+                        user.addProperty("name", rs.getString("name"));
+                        user.addProperty("phone", rs.getString("phone"));
+                        user.addProperty("balance", rs.getDouble("balance"));
+                        user.addProperty("total_spent", rs.getDouble("total_spent"));
+                        user.addProperty("total_liters", rs.getDouble("total_liters"));
+                        usersList.add(user);
+                    }
+                }
+
+                JsonObject response = new JsonObject();
+                response.addProperty("success", true);
+                response.add("data", usersList);
+                sendJsonResponse(exchange, 200, response);
+
+            } catch (Exception e) {
+                sendError(exchange, 500, "Ошибка: " + e.getMessage());
+            }
+        }
+    }
+
+    // ========== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ==========
+    private static String readRequestBody(HttpExchange exchange) throws IOException {
+        InputStream is = exchange.getRequestBody();
+        BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+        StringBuilder requestBody = new StringBuilder();
+        String line;
+        while ((line = br.readLine()) != null) {
+            requestBody.append(line);
+        }
+        return requestBody.toString();
+    }
+
+    private static void sendJsonResponse(HttpExchange exchange, int statusCode, JsonObject response) throws IOException {
+        String responseJson = gson.toJson(response);
+        exchange.getResponseHeaders().set("Content-Type", "application/json");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        exchange.sendResponseHeaders(statusCode, responseJson.getBytes().length);
+
+        OutputStream os = exchange.getResponseBody();
+        os.write(responseJson.getBytes());
+        os.close();
+    }
+
+    private static void sendError(HttpExchange exchange, int statusCode, String message) throws IOException {
+        JsonObject error = new JsonObject();
+        error.addProperty("success", false);
+        error.addProperty("error", message);
+        sendJsonResponse(exchange, statusCode, error);
+    }
+
+    // ========== МЕТОДЫ ДЛЯ СТАРОГО КОНСОЛЬНОГО ИНТЕРФЕЙСА ==========
+    public static void stopServer() {
+        if (!isRunning.get()) {
             System.out.println("Ошибка: сервер не запущен!");
             return;
         }
 
-
         server.stop(0);
         isRunning.set(false);
-
         System.out.println("Сервер остановлен");
-
-
     }
 
-    public static void showStatus(){
+    public static void showStatus() {
         String status = isRunning.get() ? "АКТИВЕН" : "НЕАКТИВЕН";
         System.out.println("Статус сервера: " + status);
-        if(isRunning.get()){
-            System.out.printf("URL: http://localhost:" + PORT);
+        if (isRunning.get()) {
+            System.out.println("URL: http://localhost:" + PORT);
         }
     }
 
-    private static void connectToDatabase(){
+    // ========== ПОДКЛЮЧЕНИЕ К БАЗЕ ДАННЫХ ==========
+    private static void connectToDatabase() {
         try {
             Class.forName("org.postgresql.Driver");
-
             String url = "jdbc:postgresql://localhost:5432/azs_database";
             String user = "postgres";
             String password = "123456";
 
             connection = DriverManager.getConnection(url, user, password);
-            System.out.println("Подключение к БД установлено");
+            System.out.println("✅ Подключение к БД установлено");
         } catch (Exception e) {
-            System.err.println("Ошибка подключения к БД: " + e.getMessage());
+            System.err.println("❌ Ошибка подключения к БД: " + e.getMessage());
         }
     }
 
@@ -91,7 +308,42 @@ public class ServerManager{
         return connection;
     }
 
-    public static String getFuelPrices(){
+    // ========== МЕТОДЫ АВТОРИЗАЦИИ ==========
+    private static boolean authenticateUser(String username, String password) {
+        String sql = "SELECT password_hash FROM operators WHERE username = ?";
+
+        try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                String hashedPassword = rs.getString("password_hash");
+                return BCrypt.checkpw(password, hashedPassword);
+            }
+        } catch (SQLException e) {
+            System.err.println("❌ Ошибка аутентификации: " + e.getMessage());
+        }
+        return false;
+    }
+
+    private static String getUserRole(String username) {
+        String sql = "SELECT role FROM operators WHERE username = ?";
+
+        try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getString("role");
+            }
+        } catch (SQLException e) {
+            System.err.println("❌ Ошибка получения роли: " + e.getMessage());
+        }
+        return "unknown";
+    }
+
+    // ========== СТАРЫЕ МЕТОДЫ (для обратной совместимости) ==========
+    public static String getFuelPrices() {
         try {
             Connection conn = getConnection();
             Statement stmt = conn.createStatement();
@@ -100,7 +352,7 @@ public class ServerManager{
             StringBuilder result = new StringBuilder();
             result.append("Актуальные цены на топливо:\n");
 
-            while (rs.next()){
+            while (rs.next()) {
                 int id = rs.getInt("id");
                 String name = rs.getString("name");
                 double price = rs.getDouble("price");
@@ -118,14 +370,14 @@ public class ServerManager{
         }
     }
 
-    public static String updateFuelPrice(int fuelId, double newPrice){
-        try{
+    public static String updateFuelPrice(int fuelId, double newPrice) {
+        try {
             Connection conn = getConnection();
             Statement stmt = conn.createStatement();
 
             ResultSet checkRs = stmt.executeQuery("SELECT name FROM fuels WHERE id = " + fuelId);
-            if(!checkRs.next()){
-                System.out.println("Ошибка: топлива с указанным ID не существует! (Id: " + fuelId + ")");
+            if (!checkRs.next()) {
+                return "Ошибка: топлива с указанным ID не существует!";
             }
 
             String fuelName = checkRs.getString("name");
@@ -135,17 +387,17 @@ public class ServerManager{
             int rowsAffected = stmt.executeUpdate(sql);
             stmt.close();
 
-            if(rowsAffected > 0){
+            if (rowsAffected > 0) {
                 return "Цена на " + fuelName + " изменена на " + newPrice + " руб.";
-            } else{
+            } else {
                 return "Ошибка изменения цены!";
             }
-        } catch(SQLException e){
+        } catch (SQLException e) {
             return "Ошибка: " + e.getMessage();
         }
     }
 
-    public static String showAZS(){
+    public static String showAZS() {
         try {
             Connection conn = getConnection();
             Statement stmt = conn.createStatement();
@@ -154,7 +406,7 @@ public class ServerManager{
             StringBuilder result = new StringBuilder();
             result.append("Список всех АЗС:\n");
 
-            while (rs.next()){
+            while (rs.next()) {
                 int id = rs.getInt("id");
                 String name = rs.getString("name");
                 String address = rs.getString("address");
@@ -173,7 +425,7 @@ public class ServerManager{
         }
     }
 
-    public static String newAZS(String name, String address, int nozzle ){
+    public static String newAZS(String name, String address, int nozzle) {
         try {
             Connection conn = getConnection();
             Statement stmt = conn.createStatement();
@@ -201,16 +453,16 @@ public class ServerManager{
             if (rowsAffected > 0) {
                 return name + " по адресу " + address + " успешно добавлена!";
             } else {
-                return "Ошибка: не удалось добавить  АЗС!";
+                return "Ошибка: не удалось добавить АЗС!";
             }
 
-        } catch (SQLException e){
+        } catch (SQLException e) {
             return "Ошибка при добавлении АЗС: " + e.getMessage();
         }
     }
 
-    public static String deleteAZS(int delete_id){
-        try{
+    public static String deleteAZS(int delete_id) {
+        try {
             Connection conn = getConnection();
 
             String checkSql = "SELECT name FROM azs WHERE id = ?";
@@ -218,7 +470,7 @@ public class ServerManager{
             checkStmt.setInt(1, delete_id);
             ResultSet rs = checkStmt.executeQuery();
 
-            if(!rs.next()){
+            if (!rs.next()) {
                 return "Ошибка: АЗС с ID: " + delete_id + " не найдена";
             }
             String azsName = rs.getString("name");
@@ -231,26 +483,30 @@ public class ServerManager{
             checkStmt.close();
             delStmt.close();
 
-            if (rowsAffected > 0){
+            if (rowsAffected > 0) {
                 return azsName + " с ID: " + delete_id + " удалена!";
             } else {
                 return "Ошибка при удалении АЗС!";
             }
-        } catch (SQLException e){
+        } catch (SQLException e) {
             return "Ошибка: " + e.getMessage();
         }
     }
 
-    public static String showOperators(){
+    public static String showOperators() {
         try {
             Connection conn = getConnection();
             Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery("SELECT o.id, o.username, o.name, o.role, " + "a.name as azs_name, a.address as azs_address " + "FROM operators o " + "LEFT JOIN azs a ON o.place = a.id " + "ORDER BY o.id");
+            ResultSet rs = stmt.executeQuery("SELECT o.id, o.username, o.name, o.role, " +
+                    "a.name as azs_name, a.address as azs_address " +
+                    "FROM operators o " +
+                    "LEFT JOIN azs a ON o.place = a.id " +
+                    "ORDER BY o.id");
 
             StringBuilder result = new StringBuilder();
             result.append("Список всех операторов:\n\n");
 
-            while (rs.next()){
+            while (rs.next()) {
                 int id = rs.getInt("id");
                 String name = rs.getString("name");
                 String username = rs.getString("username");
@@ -273,7 +529,7 @@ public class ServerManager{
 
     }
 
-    public static String createOperator(String operator_username, String operator_password, String operator_name, int operatorAZSId){
+    public static String createOperator(String operator_username, String operator_password, String operator_name, int operatorAZSId) {
         try {
             Connection conn = getConnection();
             Statement stmt = conn.createStatement();
@@ -287,25 +543,23 @@ public class ServerManager{
             if (rowsAffected > 0) {
                 return "Оператор " + operator_name + " успешно добавлен!";
             } else {
-                return "Ошибка: не удалось добавить  оператора АЗС!";
+                return "Ошибка: не удалось добавить оператора АЗС!";
             }
 
-        } catch (SQLException e){
+        } catch (SQLException e) {
             return "Ошибка при добавлении оператора АЗС: " + e.getMessage();
         }
-
-
     }
 
-    public static String deleteOperator(int deleteOperatorId){
+    public static String deleteOperator(int deleteOperatorId) {
         try {
             Connection conn = getConnection();
-            String checkSql = "SELECT id FROM operators WHERE id = ?" ;
+            String checkSql = "SELECT id FROM operators WHERE id = ?";
             PreparedStatement checkStmt = conn.prepareStatement(checkSql);
             checkStmt.setInt(1, deleteOperatorId);
             ResultSet rs = checkStmt.executeQuery();
 
-            if(!rs.next()){
+            if (!rs.next()) {
                 return "Ошибка: оператор с ID: " + deleteOperatorId + " не найден!";
             }
 
@@ -317,20 +571,18 @@ public class ServerManager{
             checkStmt.close();
             deleteStmt.close();
 
-            if(rowsAffected > 0){
+            if (rowsAffected > 0) {
                 return "Оператор с ID: " + deleteOperatorId + " удален!";
             } else {
                 return "Ошибка при удалении оператора!";
             }
 
-
-
-        }catch (Exception e){
+        } catch (Exception e) {
             return "Ошибка: " + e.getMessage();
         }
     }
 
-    public static String showUSers(){
+    public static String showUsers() {
         try {
             Connection conn = getConnection();
             Statement stmt = conn.createStatement();
@@ -339,7 +591,7 @@ public class ServerManager{
             StringBuilder result = new StringBuilder();
             result.append("Список всех пользователей:\n\n");
 
-            while (rs.next()){
+            while (rs.next()) {
                 int id = rs.getInt("id");
                 String name = rs.getString("name");
                 String username = rs.getString("username");
@@ -349,7 +601,7 @@ public class ServerManager{
                 Double total_liters = rs.getDouble("total_liters");
 
                 result.append("\t\t[ID: ").append(id).append("]\nФИО: ")
-                        .append(name).append("\n>Юзернейм: ").append(username).append("\nНомер телефона: ").append(phone).append("\nБаланс бонусов: ").append(balance).append("руб.").append("\nВсего потрачено: ").append(total_spent).append("руб").append("\nВсего заправлено: ").append(total_liters).append("л.").append("\n\n");
+                        .append(name).append("\nЮзернейм: ").append(username).append("\nНомер телефона: ").append(phone).append("\nБаланс бонусов: ").append(balance).append(" руб.").append("\nВсего потрачено: ").append(total_spent).append(" руб").append("\nВсего заправлено: ").append(total_liters).append(" л.").append("\n\n");
             }
 
             rs.close();
@@ -360,18 +612,17 @@ public class ServerManager{
         } catch (SQLException e) {
             return "Ошибка при получении списка пользователей: " + e.getMessage();
         }
-
     }
 
-    public static String deleteUser(int choice){
+    public static String deleteUser(int choice) {
         try {
             Connection conn = getConnection();
-            String checkSql = "SELECT id FROM users WHERE id = ?" ;
+            String checkSql = "SELECT id FROM users WHERE id = ?";
             PreparedStatement checkStmt = conn.prepareStatement(checkSql);
             checkStmt.setInt(1, choice);
             ResultSet rs = checkStmt.executeQuery();
 
-            if(!rs.next()){
+            if (!rs.next()) {
                 return "Ошибка: пользователь с ID: " + choice + " не найден!";
             }
 
@@ -383,23 +634,21 @@ public class ServerManager{
             checkStmt.close();
             deleteStmt.close();
 
-            if(rowsAffected > 0){
+            if (rowsAffected > 0) {
                 return "Пользователь с ID: " + choice + " удален!";
             } else {
                 return "Ошибка при удалении пользователя!";
             }
 
-
-
-        }catch (Exception e){
+        } catch (Exception e) {
             return "Ошибка: " + e.getMessage();
         }
     }
 
-    public static String executeCommand(String command){
+    public static String executeCommand(String command) {
         if (command.isEmpty()) return "";
 
-        switch (command){
+        switch (command) {
             case "start":
                 startServer();
                 break;
@@ -413,7 +662,7 @@ public class ServerManager{
                 System.out.println(createOperator("testUsername", "test_password", "Иванов Иван Иванович", 1));
                 break;
             case "users":
-                System.out.println(showUSers());
+                System.out.println(showUsers());
                 break;
             case "azs":
                 System.out.println(showAZS());

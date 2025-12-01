@@ -8,38 +8,47 @@
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<BorderPane minHeight="600" minWidth="800" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.azs.LoginController">
+<BorderPane minHeight="600" minWidth="1200.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.azs.LoginController">
 
     <!-- Правая часть (форма входа) -->
     <right>
         <BorderPane style="-fx-background-color: linear-gradient(to bottom, #ff8601, #e67e22);">
             <center>
-                <VBox alignment="TOP_CENTER" spacing="30">
+                <VBox alignment="TOP_CENTER" prefHeight="752.0" prefWidth="745.0" spacing="30">
                     <children>
+                        <!-- Поле подключения к серверу -->
+                        <VBox alignment="CENTER" spacing="10" style="-fx-padding: 20 0 0 0;">
+                            <Label style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Подключение к серверу" textFill="WHITE" />
+
+                            <HBox alignment="CENTER" spacing="10">
+                                <TextField fx:id="serverAddressField" prefHeight="40" prefWidth="300" promptText="Адрес сервера (IP или localhost)" style="-fx-background-radius: 10; -fx-font-size: 14px;">
+                                </TextField>
+                                <Button fx:id="connectButton" onAction="#handleConnect" prefHeight="40" style="-fx-background-color: #ffffff; -fx-text-fill: black; -fx-font-weight: bold; -fx-background-radius: 8;" text="Подключить">
+                                </Button>
+                            </HBox>
+
+                            <Label fx:id="statusLabel" style="-fx-font-size: 14px;" text="Не подключено" textFill="white" />
+                        </VBox>
+
                         <!-- Заголовок -->
                         <VBox alignment="CENTER" spacing="10">
-                            <Label prefHeight="74.0" prefWidth="524.0" style="-fx-font-size: 40px; -fx-font-weight: bold;" text="Авторизация" textFill="WHITE">
+                            <Label style="-fx-font-size: 40px; -fx-font-weight: bold;" text="Авторизация" textFill="WHITE">
                                 <padding>
                                     <Insets top="50" />
                                 </padding>
-                        <VBox.margin>
-                           <Insets />
-                        </VBox.margin>
                             </Label>
-                            <Label maxWidth="524.0" prefHeight="57.0" prefWidth="524.0" style="-fx-font-size: 18px;" text="Авторизируйтесь в системе чтобы продолжить" textAlignment="CENTER" textFill="WHITE" wrapText="true">
+                            <Label maxWidth="400" style="-fx-font-size: 18px;" text="Авторизируйтесь в системе чтобы продолжить" textAlignment="CENTER" textFill="WHITE" wrapText="true">
                                 <padding>
                                     <Insets bottom="30" />
                                 </padding>
                             </Label>
-                     <VBox.margin>
-                        <Insets top="50.0" />
-                     </VBox.margin>
                         </VBox>
 
                         <!-- Поля ввода -->
-                        <VBox alignment="CENTER_LEFT" maxWidth="500" spacing="20">
+                        <VBox alignment="CENTER" maxWidth="500" spacing="20">
                             <TextField fx:id="usernameField" maxWidth="400" prefHeight="50" promptText="👤 Логин" style="-fx-background-radius: 15; -fx-font-size: 16px;">
                             </TextField>
 
@@ -54,7 +63,7 @@
                         </VBox>
 
                         <!-- Информационный текст -->
-                        <VBox alignment="CENTER_LEFT" maxWidth="500" spacing="10" style="-fx-padding: 40 0 0 0;">
+                        <VBox alignment="CENTER_LEFT" maxWidth="532.0" prefHeight="130.0" prefWidth="532.0" spacing="10" style="-fx-padding: 40 0 0 0;">
                             <Label style="-fx-font-size: 14px; -fx-font-style: italic;" text="Возникли проблемы со входом? Проверьте правильность введенного логина и пароля. По всем вопросам обращайтесь к администратору АЗС" textFill="#f0f0f0" wrapText="true">
                             </Label>
 
@@ -73,10 +82,10 @@
 
     <!-- Левая часть (лого и приветствие) -->
     <left>
-        <BorderPane prefHeight="605.0" prefWidth="255.0" style="-fx-background-color: #FFFFFF;">
+        <BorderPane prefHeight="752.0" prefWidth="456.0" style="-fx-background-color: #FFFFFF;">
             <top>
                 <VBox alignment="CENTER">
-                    <ImageView fitHeight="120" fitWidth="280" preserveRatio="true">
+                    <ImageView fitHeight="117.0" fitWidth="361.0" preserveRatio="true">
                         <image>
                             <Image url="@../images/Logo_black.png" />
                         </image>
@@ -90,7 +99,7 @@
             <center>
                 <VBox alignment="CENTER" spacing="20">
                     <children>
-                        <Label maxWidth="319.0" prefHeight="94.0" prefWidth="319.0" style="-fx-font-size: 32px; -fx-font-weight: bold;" text="Добро пожаловать!" textAlignment="CENTER" wrapText="true">
+                        <Label maxWidth="300" style="-fx-font-size: 32px; -fx-font-weight: bold;" text="Добро пожаловать!" textAlignment="CENTER" wrapText="true">
                         </Label>
 
                         <Label maxWidth="300" style="-fx-font-size: 24px; -fx-font-weight: bold;" text="Система управления АЗС" textAlignment="CENTER" wrapText="true">
@@ -104,13 +113,13 @@
             </center>
 
             <bottom>
-                <VBox alignment="CENTER" fillWidth="false" prefHeight="224.0" prefWidth="359.0">
-                    <ImageView fitHeight="233.0" fitWidth="254.0" nodeOrientation="INHERIT" preserveRatio="true">
+                <VBox alignment="CENTER">
+                    <ImageView fitHeight="278.0" fitWidth="375.0" preserveRatio="true">
                         <image>
                             <Image url="@../images/login_window.jpg" />
                         </image>
                   <VBox.margin>
-                     <Insets bottom="-30.0" left="-80.0" />
+                     <Insets bottom="-30.0" left="-155.0" />
                   </VBox.margin>
                     </ImageView>
 
