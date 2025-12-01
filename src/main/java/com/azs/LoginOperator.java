@@ -5,7 +5,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-
+import javafx.stage.Screen;
 
 public class LoginOperator extends Application {
 
@@ -16,10 +16,8 @@ public class LoginOperator extends Application {
         primaryStage.setScene(scene);
 
         primaryStage.setTitle("Система управления АЗС Phaeton");
-        primaryStage.setFullScreen(true);
-        //primaryStage.setFullScreenExitHint("");
-        primaryStage.setMinWidth(1000);
-        primaryStage.setMinHeight(700);
+
+
 
         primaryStage.show();
     }

@@ -1,18 +1,22 @@
 package com.azs;
 
 import com.sun.net.httpserver.HttpServer;
-import java.io.IOException;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpExchange;
+import com.google.gson.*;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.sql.*;
-import java.util.Scanner;
-import org.mindrot.jbcrypt.BCrypt;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.mindrot.jbcrypt.BCrypt;
+
 
 public class ServerManager{
     private static HttpServer server;
     private static Connection connection;
     private static final AtomicBoolean isRunning = new AtomicBoolean(false);
     private static final int PORT = 8080;
+    private static final Gson gson = new Gson();
 
     public static void startServer() {
         if(isRunning.get()){
@@ -21,20 +25,29 @@ public class ServerManager{
         }
 
         try{
-            server = HttpServer.create(new InetSocketAddress(PORT), 0);
+            server = HttpServer.create(new InetSocketAddress("0.0.0.0", PORT), 0);
 
-            //обработчики
+            server.createContext("/api/auth", new AuthHandler());
+            server.createContext("/api/azs", new AzsHandler());
+            server.createContext("/api/fuel", new FuelHandler());
+            server.createContext("/api/operators", new OperatorsHandler());
+            server.createContext("/api/users", new UsersHandler());
+
 
             server.setExecutor(null);
             server.start();
             isRunning.set(true);
 
-            System.out.println("Сервер успешно запущен на порту: " + PORT);
+            System.out.println("✅ Сервер запущен на порту: " + PORT);
+            System.out.println("🌐 Доступ по: http://localhost:" + PORT);
+            System.out.println("🌐 Или по вашему IP: http://[ваш_ip]:" + PORT);
             connectToDatabase();
         } catch (IOException e){
-            System.err.println("Ошибка запуска сервера: " + e.getMessage());
+            System.err.println("❌ Ошибка запуска сервера: " + e.getMessage());
         }
     }
+
+
 
     public static void stopServer(){
         if(!isRunning.get()){
@@ -164,8 +177,23 @@ public class ServerManager{
         try {
             Connection conn = getConnection();
             Statement stmt = conn.createStatement();
-            String sql = "INSERT INTO azs (name, address, nozzle_count) " +
-                    "VALUES ('" + name + "', '" + address + "', " + nozzle + ")";
+            String sql = "";
+
+            if (nozzle == 1) {
+                sql = "INSERT INTO azs (name, address, nozzle_count, nozzle_1) " +
+                        "VALUES ('" + name + "', '" + address + "', " + nozzle + ", 'active')";
+            } else if (nozzle == 2) {
+                sql = "INSERT INTO azs (name, address, nozzle_count, nozzle_1, nozzle_2) " +
+                        "VALUES ('" + name + "', '" + address + "', " + nozzle + ", 'active', 'active')";
+            } else if (nozzle == 3) {
+                sql = "INSERT INTO azs (name, address, nozzle_count, nozzle_1, nozzle_2, nozzle_3) " +
+                        "VALUES ('" + name + "', '" + address + "', " + nozzle + ", 'active', 'active', 'active')";
+            } else if (nozzle == 4) {
+                sql = "INSERT INTO azs (name, address, nozzle_count, nozzle_1, nozzle_2, nozzle_3, nozzle_4) " +
+                        "VALUES ('" + name + "', '" + address + "', " + nozzle + ", 'active', 'active', 'active', 'active')";
+            } else {
+                return "Ошибка при добавлении АЗС! Количество колонок должно быть от 1 до 4.";
+            }
 
             int rowsAffected = stmt.executeUpdate(sql);
             stmt.close();
