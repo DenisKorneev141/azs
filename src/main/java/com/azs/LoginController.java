@@ -155,11 +155,11 @@ public class LoginController {
                 adminStage.show();
             } else {
                 // Окно оператора
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/operator_dashboard.fxml"));
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main.fxml"));
                 Parent root = loader.load();
                 Stage operatorStage = new Stage();
                 operatorStage.setTitle("Рабочее место оператора - АЗС Phaeton");
-                operatorStage.setScene(new Scene(root, 1000, 700));
+                operatorStage.setScene(new Scene(root, 1920, 1000));
                 operatorStage.show();
             }
 

@@ -15,7 +15,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane minHeight="1080.0" minWidth="1920.0" prefHeight="800" prefWidth="1200" stylesheets="@../styles/main.css" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.azs.controller.MainController">
+<BorderPane minHeight="700.0" minWidth="1200.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1">
     
     <!-- TOP: Шапка с информацией -->
     <top>
@@ -28,9 +28,9 @@
                      <Image url="@../images/Logo_white.png" />
                   </image>
                </ImageView>
-                    <ImageView fitHeight="40" fitWidth="40" preserveRatio="true">
-                        <Image url="@../images/azs_logo.png" />
-                    </ImageView>
+<!--                    <ImageView fitHeight="40" fitWidth="40" preserveRatio="true">-->
+<!--                        <Image url="@../images/Logo_white.png" />-->
+<!--                    </ImageView>-->
                     <VBox spacing="2" />
                 </HBox>
                 
