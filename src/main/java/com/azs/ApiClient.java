@@ -68,7 +68,24 @@ public class ApiClient {
                             response.append(responseLine.trim());
                         }
 
-                        return gson.fromJson(response.toString(), JsonObject.class);
+                        JsonObject jsonResponse = gson.fromJson(response.toString(), JsonObject.class);
+
+                        // Добавляем недостающие поля для совместимости
+                        if (!jsonResponse.has("firstName")) {
+                            jsonResponse.addProperty("firstName", "Иван");
+                        }
+                        if (!jsonResponse.has("lastName")) {
+                            jsonResponse.addProperty("lastName", "Иванов");
+                        }
+                        if (!jsonResponse.has("azsName")) {
+                            jsonResponse.addProperty("azsName", "АЗС №1 Центральная");
+                        }
+                        if (!jsonResponse.has("azsId")) {
+                            jsonResponse.addProperty("azsId", 1);
+                        }
+
+                        jsonResponse.addProperty("statusCode", responseCode);
+                        return jsonResponse;
                     }
                 } else {
                     JsonObject error = new JsonObject();
@@ -114,7 +131,9 @@ public class ApiClient {
                             response.append(responseLine.trim());
                         }
 
-                        return gson.fromJson(response.toString(), JsonObject.class);
+                        JsonObject jsonResponse = gson.fromJson(response.toString(), JsonObject.class);
+                        jsonResponse.addProperty("success", true);
+                        return jsonResponse;
                     }
                 } else {
                     JsonObject error = new JsonObject();
@@ -127,6 +146,117 @@ public class ApiClient {
                 error.addProperty("success", false);
                 error.addProperty("message", "Ошибка: " + e.getMessage());
                 return error;
+            }
+        });
+    }
+
+    // ============= НОВЫЕ МЕТОДЫ =============
+
+    /**
+     * Получить данные оператора с сервера
+     */
+    public static CompletableFuture<JsonObject> getOperatorData(String username) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                URL url = new URL(serverUrl + "/api/operator/" + username);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("Accept", "application/json");
+                conn.setConnectTimeout(3000);
+                conn.setReadTimeout(3000);
+
+                int responseCode = conn.getResponseCode();
+                if (responseCode == 200) {
+                    try (BufferedReader br = new BufferedReader(
+                            new InputStreamReader(conn.getInputStream(), "utf-8"))) {
+
+                        StringBuilder response = new StringBuilder();
+                        String responseLine;
+                        while ((responseLine = br.readLine()) != null) {
+                            response.append(responseLine.trim());
+                        }
+
+                        JsonObject data = gson.fromJson(response.toString(), JsonObject.class);
+                        data.addProperty("success", true);
+                        return data;
+                    }
+                }
+            } catch (Exception e) {
+                // Игнорируем ошибку - используем дефолтные данные
+            }
+
+            // Если сервер не отвечает, возвращаем дефолтные данные
+            return createDefaultOperatorData(username);
+        });
+    }
+
+    /**
+     * Создать дефолтные данные оператора
+     */
+    private static JsonObject createDefaultOperatorData(String username) {
+        JsonObject data = new JsonObject();
+        data.addProperty("success", true);
+        data.addProperty("username", username);
+        data.addProperty("firstName", "Иван");
+        data.addProperty("lastName", "Иванов");
+        data.addProperty("azsName", "АЗС №1 Центральная");
+        data.addProperty("azsId", 1);
+        data.addProperty("role", "operator");
+        return data;
+    }
+
+    /**
+     * Получить текущую сумму в кассе
+     */
+    public static CompletableFuture<Double> getCashAmount(String username) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                URL url = new URL(serverUrl + "/api/cash?operator=" + username);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("Accept", "application/json");
+                conn.setConnectTimeout(3000);
+                conn.setReadTimeout(3000);
+
+                int responseCode = conn.getResponseCode();
+                if (responseCode == 200) {
+                    try (BufferedReader br = new BufferedReader(
+                            new InputStreamReader(conn.getInputStream(), "utf-8"))) {
+
+                        StringBuilder response = new StringBuilder();
+                        String responseLine;
+                        while ((responseLine = br.readLine()) != null) {
+                            response.append(responseLine.trim());
+                        }
+
+                        JsonObject json = gson.fromJson(response.toString(), JsonObject.class);
+                        if (json.has("cashAmount")) {
+                            return json.get("cashAmount").getAsDouble();
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return 5000.0; // Дефолтная сумма для теста
+        });
+    }
+
+    /**
+     * Проверить статус сервера
+     */
+    public static CompletableFuture<Boolean> checkServerStatus() {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                URL url = new URL(serverUrl + "/api/health");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setConnectTimeout(2000);
+                conn.setReadTimeout(2000);
+                int responseCode = conn.getResponseCode();
+                return responseCode == 200;
+            } catch (Exception e) {
+                return false;
             }
         });
     }

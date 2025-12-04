@@ -62,26 +62,167 @@ public class ServerManager {
                 String password = json.get("password").getAsString();
 
                 JsonObject response = new JsonObject();
-                boolean authenticated = authenticateUser(username, password);
 
-                if (authenticated) {
-                    String role = getUserRole(username);
-                    response.addProperty("success", true);
-                    response.addProperty("message", "Авторизация успешна");
-                    response.addProperty("username", username);
-                    response.addProperty("role", role);
-                    System.out.println("✅ Успешный вход: " + username);
-                } else {
+                // ЗАПРОС К БД ДЛЯ ПОЛУЧЕНИЯ ВСЕХ ДАННЫХ ОПЕРАТОРА
+                String sql = "SELECT " +
+                        "o.id, o.username, o.name as operator_name, o.role, " +
+                        "o.place as azs_id, a.name as azs_name, a.address as azs_address " +
+                        "FROM operators o " +
+                        "LEFT JOIN azs a ON o.place = a.id " +
+                        "WHERE o.username = ? AND o.password_hash = ? AND o.is_active = true"; // ИСПРАВЛЕНО: status → is_active
+
+                try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
+                    // ВАЖНО: нужно получать хеш из БД, а не создавать новый!
+                    // Сначала нужно получить хеш пароля из БД для этого пользователя
+
+                    // 1. Сначала получаем хеш пароля из БД
+                    String getHashSql = "SELECT password_hash FROM operators WHERE username = ?";
+                    try (PreparedStatement hashStmt = getConnection().prepareStatement(getHashSql)) {
+                        hashStmt.setString(1, username);
+                        ResultSet hashRs = hashStmt.executeQuery();
+
+                        if (hashRs.next()) {
+                            String storedHash = hashRs.getString("password_hash");
+
+                            // 2. Проверяем пароль
+                            if (BCrypt.checkpw(password, storedHash)) {
+                                // 3. Если пароль верный, получаем остальные данные
+                                pstmt.setString(1, username);
+                                pstmt.setString(2, storedHash); // Используем реальный хеш из БД
+
+                                ResultSet rs = pstmt.executeQuery();
+
+                                if (rs.next()) {
+                                    // 1. Получаем основные данные оператора
+                                    int operatorId = rs.getInt("id");
+                                    String role = rs.getString("role");
+                                    String operatorName = rs.getString("operator_name");
+
+                                    // Разделяем ФИО на имя и фамилию
+                                    String firstName = "Иван";
+                                    String lastName = "Иванов";
+
+                                    if (operatorName != null && !operatorName.trim().isEmpty()) {
+                                        String[] nameParts = operatorName.split(" ");
+                                        if (nameParts.length >= 2) {
+                                            firstName = nameParts[0];
+                                            lastName = nameParts[1];
+                                        } else if (nameParts.length == 1) {
+                                            firstName = nameParts[0];
+                                            lastName = "";
+                                        }
+                                    }
+
+                                    // 2. Получаем данные АЗС
+                                    int azsId = rs.getInt("azs_id");
+                                    String azsName = rs.getString("azs_name");
+                                    String azsAddress = rs.getString("azs_address");
+
+                                    // 3. Получаем сумму транзакций за сегодня
+                                    double todaysTotal = getTodaysTransactionsTotal(operatorId);
+
+                                    // 4. Формируем ответ
+                                    response.addProperty("success", true);
+                                    response.addProperty("message", "Авторизация успешна");
+                                    response.addProperty("username", username);
+                                    response.addProperty("role", role);
+
+                                    // Данные оператора
+                                    JsonObject userData = new JsonObject();
+                                    userData.addProperty("id", operatorId);
+                                    userData.addProperty("username", username);
+                                    userData.addProperty("firstName", firstName);
+                                    userData.addProperty("lastName", lastName);
+                                    userData.addProperty("fullName", operatorName);
+
+                                    // Данные АЗС
+                                    JsonObject azsData = new JsonObject();
+                                    azsData.addProperty("id", azsId);
+                                    azsData.addProperty("name", azsName != null ? azsName : "Не указана");
+                                    azsData.addProperty("address", azsAddress != null ? azsAddress : "Не указан");
+
+                                    userData.add("azs", azsData);
+                                    response.add("user", userData);
+
+                                    // Сумма транзакций
+                                    response.addProperty("todaysTotal", todaysTotal);
+                                    response.addProperty("formattedTotal", String.format("%.2f ₽", todaysTotal));
+
+                                    System.out.println("✅ Успешный вход: " + username);
+                                    System.out.println("   Оператор: " + operatorName);
+                                    System.out.println("   АЗС: " + azsName);
+                                    System.out.println("   Сумма за сегодня: " + todaysTotal + " ₽");
+
+                                } else {
+                                    // Неверные учетные данные
+                                    response.addProperty("success", false);
+                                    response.addProperty("message", "Неверный логин или пароль");
+                                    System.out.println("❌ Неудачная попытка входа: " + username);
+                                }
+                            } else {
+                                // Неверный пароль
+                                response.addProperty("success", false);
+                                response.addProperty("message", "Неверный логин или пароль");
+                                System.out.println("❌ Неверный пароль для пользователя: " + username);
+                            }
+                        } else {
+                            // Пользователь не найден
+                            response.addProperty("success", false);
+                            response.addProperty("message", "Неверный логин или пароль");
+                            System.out.println("❌ Пользователь не найден: " + username);
+                        }
+                    }
+                } catch (SQLException e) {
                     response.addProperty("success", false);
-                    response.addProperty("message", "Неверный логин или пароль");
-                    System.out.println("❌ Неудачная попытка входа: " + username);
+                    response.addProperty("message", "Ошибка базы данных: " + e.getMessage());
+                    System.err.println("❌ Ошибка БД при авторизации: " + e.getMessage());
+                    e.printStackTrace();
                 }
 
                 sendJsonResponse(exchange, 200, response);
 
             } catch (Exception e) {
-                sendError(exchange, 500, "Ошибка сервера: " + e.getMessage());
+                JsonObject error = new JsonObject();
+                error.addProperty("success", false);
+                error.addProperty("message", "Ошибка сервера: " + e.getMessage());
+                sendJsonResponse(exchange, 500, error);
+                e.printStackTrace();
             }
+        }
+
+        // Метод для получения суммы транзакций за сегодня
+        private double getTodaysTransactionsTotal(int operatorId) {
+            // Сначала получаем azs_id оператора
+            String getAzsSql = "SELECT place as azs_id FROM operators WHERE id = ?";
+
+            try (PreparedStatement pstmt = getConnection().prepareStatement(getAzsSql)) {
+                pstmt.setInt(1, operatorId);
+                ResultSet rs = pstmt.executeQuery();
+
+                if (rs.next()) {
+                    int azsId = rs.getInt("azs_id");
+
+                    // Теперь получаем сумму транзакций для этой АЗС за сегодня
+                    String sumSql = "SELECT COALESCE(SUM(total_amount), 0) as todays_total " +
+                            "FROM transactions " +
+                            "WHERE azs_id = ? " +
+                            "AND DATE(created_at) = CURRENT_DATE";
+
+                    try (PreparedStatement sumStmt = getConnection().prepareStatement(sumSql)) {
+                        sumStmt.setInt(1, azsId);
+                        ResultSet sumRs = sumStmt.executeQuery();
+
+                        if (sumRs.next()) {
+                            return sumRs.getDouble("todays_total");
+                        }
+                    }
+                }
+            } catch (SQLException e) {
+                System.err.println("❌ Ошибка получения суммы транзакций: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+            return 0.0;
         }
     }
 

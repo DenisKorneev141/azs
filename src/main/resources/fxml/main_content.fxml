@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+
+<VBox xmlns="http://javafx.com/javafx/25"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.azs.controllers.SalesController"
+      spacing="20" style="-fx-padding: 30;" alignment="TOP_CENTER">
+
+    <Label text="Панель управления продажами" style="-fx-font-size: 36px; -fx-text-fill: #2c3e50; -fx-font-weight: bold;" />
+
+    <!-- Быстрые действия -->
+    <HBox spacing="30" alignment="CENTER">
+        <VBox alignment="CENTER" spacing="10" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+            <Label text="🚀 Быстрая продажа" style="-fx-font-size: 24px; -fx-font-weight: bold;" />
+            <Button text="Новая продажа" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 12 25; -fx-background-radius: 8;" />
+        </VBox>
+
+        <VBox alignment="CENTER" spacing="10" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+            <Label text="📈 Сегодня" style="-fx-font-size: 24px; -fx-font-weight: bold;" />
+            <Label fx:id="todaySalesLabel" text="12 450 BYN" style="-fx-font-size: 32px; -fx-text-fill: #27ae60; -fx-font-weight: bold;" />
+            <Label fx:id="todayTransactionsLabel" text="24 транзакции" style="-fx-font-size: 16px; -fx-text-fill: #7f8c8d;" />
+        </VBox>
+    </HBox>
+
+    <!-- История продаж -->
+    <VBox spacing="10" style="-fx-padding: 20; -fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #bdc3c7; -fx-border-width: 1;">
+        <Label text="🕐 Последние транзакции" style="-fx-font-size: 24px; -fx-font-weight: bold;" />
+        <TableView fx:id="recentTransactionsTable" prefHeight="200">
+            <columns>
+                <TableColumn prefWidth="150" text="Время" />
+                <TableColumn prefWidth="100" text="Топливо" />
+                <TableColumn prefWidth="80" text="Литры" />
+                <TableColumn prefWidth="100" text="Сумма" />
+            </columns>
+        </TableView>
+    </VBox>
+</VBox>

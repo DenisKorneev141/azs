@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx/25"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.azs.controllers.PricesController"
+      alignment="CENTER" spacing="30" style="-fx-padding: 50;">
+
+    <Label text="Текущие цены на топливо" style="-fx-font-size: 48px; -fx-text-fill: #2c3e50; -fx-font-weight: bold;" />
+
+    <HBox alignment="CENTER" spacing="30">
+        <!-- АИ-92 -->
+        <VBox alignment="CENTER" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+            <Label text="⛽ АИ-92" style="-fx-text-fill: #2c3e50; -fx-font-size: 30; -fx-font-weight: bold;" />
+            <Label fx:id="ai92Price" text="Загрузка..." style="-fx-font-size: 36px; -fx-text-fill: #e67e22; -fx-font-weight: bold;" />
+            <Label text="за литр" style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" />
+        </VBox>
+
+        <!-- АИ-95 -->
+        <VBox alignment="CENTER" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+            <Label text="⛽ АИ-95" style="-fx-text-fill: #2c3e50; -fx-font-size: 30; -fx-font-weight: bold;" />
+            <Label fx:id="ai95Price" text="Загрузка..." style="-fx-font-size: 36px; -fx-text-fill: #e67e22; -fx-font-weight: bold;" />
+            <Label text="за литр" style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" />
+        </VBox>
+
+        <!-- АИ-98 -->
+        <VBox alignment="CENTER" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+            <Label text="⛽ АИ-98" style="-fx-text-fill: #2c3e50; -fx-font-size: 30; -fx-font-weight: bold;" />
+            <Label fx:id="ai98Price" text="Загрузка..." style="-fx-font-size: 36px; -fx-text-fill: #e67e22; -fx-font-weight: bold;" />
+            <Label text="за литр" style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" />
+        </VBox>
+    </HBox>
+
+    <HBox alignment="CENTER" spacing="30">
+        <!-- АИ-100 -->
+        <VBox alignment="CENTER" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+            <Label text="⛽ АИ-100" style="-fx-text-fill: #2c3e50; -fx-font-size: 30; -fx-font-weight: bold;" />
+            <Label fx:id="ai100Price" text="Загрузка..." style="-fx-font-size: 36px; -fx-text-fill: #e67e22; -fx-font-weight: bold;" />
+            <Label text="за литр" style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" />
+        </VBox>
+
+        <!-- ДТ-К5 -->
+        <VBox alignment="CENTER" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+            <Label text="⛽ ДТ-К5" style="-fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
+            <Label fx:id="dtk5Price" text="Загрузка..." style="-fx-font-size: 36px; -fx-text-fill: #e67e22; -fx-font-weight: bold;" />
+            <Label text="за литр" style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" />
+        </VBox>
+    </HBox>
+
+    <!-- Информация -->
+    <VBox alignment="CENTER" spacing="10" style="-fx-padding: 20;">
+        <Label style="-fx-font-size: 16px; -fx-text-fill: #7f8c8d;" text="Цены фиксированные и обновляются администратором" />
+        <Label fx:id="lastUpdateLabel" style="-fx-font-size: 14px; -fx-text-fill: #95a5a6;" text="Последнее обновление: --:--" />
+    </VBox>
+</VBox>

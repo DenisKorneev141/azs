@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox alignment="TOP_CENTER" prefHeight="659.0" prefWidth="946.0" spacing="20" style="-fx-padding: 30;" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.azs.controllers.ReportsController">
+
+    <Label style="-fx-font-size: 36px; -fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="Отчеты и аналитика" />
+
+    <!-- Фильтры периода -->
+    <HBox alignment="CENTER" spacing="15">
+        <Label style="-fx-font-size: 16px; -fx-text-fill: #2c3e50;" text="Период отчета:" />
+        <DatePicker fx:id="reportStartDate" promptText="Начальная дата" style="-fx-pref-width: 150;" />
+        <Label style="-fx-font-size: 16px; -fx-text-fill: #2c3e50;" text="до" />
+        <DatePicker fx:id="reportEndDate" promptText="Конечная дата" style="-fx-pref-width: 150;" />
+        <Button fx:id="generateReportButton" style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-pref-width: 150;" text="Сформировать" />
+    </HBox>
+
+    <!-- Быстрые отчеты -->
+    <HBox alignment="CENTER" spacing="10">
+        <Label style="-fx-font-size: 14px; -fx-text-fill: #2c3e50;" text="Быстрые отчеты:" />
+        <Button fx:id="dailyReportButton" style="-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-pref-width: 120;" text="За день" />
+        <Button fx:id="weeklyReportButton" style="-fx-background-color: #f39c12; -fx-text-fill: white; -fx-pref-width: 120;" text="За неделю" />
+        <Button fx:id="monthlyReportButton" style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-pref-width: 120;" text="За месяц" />
+        <Button fx:id="yearlyReportButton" style="-fx-background-color: #9b59b6; -fx-text-fill: white; -fx-pref-width: 120;" text="За год" />
+    </HBox>
+
+    <!-- Статистика -->
+    <HBox alignment="CENTER" spacing="30" style="-fx-padding: 20;">
+        <VBox alignment="CENTER" prefHeight="274.0" prefWidth="200.0" spacing="5" style="-fx-padding: 15; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+            <Label style="-fx-font-size: 18px; -fx-text-fill: #2c3e50;" text="Общая выручка" />
+            <Label fx:id="totalRevenueLabel" style="-fx-font-size: 28px; -fx-text-fill: #27ae60; -fx-font-weight: bold;" text="0 BYN" />
+        </VBox>
+
+        <VBox alignment="CENTER" spacing="5" style="-fx-padding: 15; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+            <Label style="-fx-font-size: 18px; -fx-text-fill: #2c3e50;" text="Продано литров" />
+            <Label fx:id="totalLitersLabel" style="-fx-font-size: 28px; -fx-text-fill: #3498db; -fx-font-weight: bold;" text="0 л" />
+        </VBox>
+
+        <VBox alignment="CENTER" spacing="5" style="-fx-padding: 15; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+            <Label style="-fx-font-size: 18px; -fx-text-fill: #2c3e50;" text="Количество продаж" />
+            <Label fx:id="totalSalesCountLabel" style="-fx-font-size: 28px; -fx-text-fill: #e67e22; -fx-font-weight: bold;" text="0" />
+        </VBox>
+    </HBox>
+
+    <!-- Кнопки экспорта -->
+    <HBox alignment="CENTER" spacing="20">
+        <Button fx:id="exportExcelButton" style="-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-padding: 12 25; -fx-background-radius: 8;" text="📊 Экспорт в Excel" />
+        <Button fx:id="exportPdfButton" style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-padding: 12 25; -fx-background-radius: 8;" text="📄 Экспорт в PDF" />
+        <Button fx:id="printReportButton" style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-padding: 12 25; -fx-background-radius: 8;" text="Печать отчета" />
+    </HBox>
+
+    <!-- Информация -->
+    <VBox alignment="CENTER" spacing="5" style="-fx-padding: 10;">
+        <Label style="-fx-font-size: 14px; -fx-text-fill: #7f8c8d;" text="*Отчеты формируются на основе данных о продажах" />
+        <Label style="-fx-font-size: 14px; -fx-text-fill: #7f8c8d;" text="*Для получения детализированного отчета выберите период" />
+    </VBox>
+</VBox>

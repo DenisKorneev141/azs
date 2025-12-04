@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox alignment="CENTER" prefHeight="778.0" prefWidth="1161.0" spacing="30" style="-fx-padding: 50;" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.azs.controllers.NozzlesController">
+
+    <Label style="-fx-font-size: 36px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Управление топливными колонками" />
+
+    <HBox alignment="CENTER" spacing="30">
+        <!-- Колонка 1 -->
+        <VBox alignment="CENTER" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+            <Label style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="⛽ Колонка 1" />
+            <Label fx:id="nozzle1Status" style="-fx-font-size: 24px; -fx-text-fill: #27ae60; -fx-font-weight: bold;" text="Активна" />
+            <Label style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" text="АИ-92, 95, 98, 100" />
+            <Label style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" text="ДТ-К5" />
+            <Button fx:id="nozzle1QrButton" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6;" text="QR-код" />
+            <Button fx:id="nozzle1DeactivateButton" style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6;" text="Деактивировать" />
+        </VBox>
+
+        <!-- Колонка 2 -->
+        <VBox alignment="CENTER" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+            <Label style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="⛽ Колонка 2" />
+            <Label fx:id="nozzle2Status" style="-fx-font-size: 24px; -fx-text-fill: #27ae60; -fx-font-weight: bold;" text="Активна" />
+            <Label style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" text="АИ-92, 95, 98, 100" />
+            <Label style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" text="ДТ-К5" />
+            <Button fx:id="nozzle2QrButton" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6;" text="QR-код" />
+            <Button fx:id="nozzle2DeactivateButton" style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6;" text="Деактивировать" />
+        </VBox>
+        <!-- Колонка 3 -->
+        <VBox alignment="CENTER" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+            <Label style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #e74c3c;" text="⛽ Колонка 3" />
+            <Label fx:id="nozzle3Status" style="-fx-font-size: 24px; -fx-text-fill: #e74c3c; -fx-font-weight: bold;" text="Неактивна" />
+            <Label style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" text="АИ-92, 95, 98, 100" />
+            <Label style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" text="ДТ-К5" />
+            <Button fx:id="nozzle3QrButton" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6;" text="QR-код" />
+            <Button fx:id="nozzle3ActivateButton" style="-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6;" text="Включить" />
+        </VBox>
+
+        <!-- Колонка 4 -->
+        <VBox alignment="CENTER" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+            <Label style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="⛽ Колонка 4" />
+            <Label fx:id="nozzle4Status" style="-fx-font-size: 24px; -fx-text-fill: #27ae60; -fx-font-weight: bold;" text="Активна" />
+            <Label style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" text="АИ-92, 95, 98, 100" />
+            <Label style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" text="ДТ-К5" />
+            <Button fx:id="nozzle4QrButton" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6;" text="QR-код" />
+            <Button fx:id="nozzle4DeactivateButton" style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6;" text="Деактивировать" />
+        </VBox>
+    </HBox>
+
+    <HBox alignment="CENTER" spacing="30" />
+
+    <!-- Добавить новую колонку -->
+    <VBox alignment="CENTER" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+        <Label style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="⛽ Добавить новую колонку" />
+        <Label style="-fx-font-size: 18px; -fx-text-fill: #7f8c8d;" text="Поддерживаемые виды топлива: АИ-92, 95, 98, 100, ДТ-К5" />
+        <Button fx:id="addNozzleButton" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-padding: 12 25; -fx-background-radius: 8;" text="Добавить колонку" />
+    </VBox>
+</VBox>
