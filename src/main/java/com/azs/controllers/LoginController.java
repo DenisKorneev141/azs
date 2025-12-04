@@ -123,6 +123,8 @@ public class LoginController {
                             String azsName = "АЗС №1 Центральная";
                             int azsId = 1;
                             double todaysTotal = 0.0;
+                            int todaysTransactions = 0;
+                            double todaysLiters = 0.0;
 
                             // Проверяем наличие поля user
                             if (response.has("user") && response.get("user").isJsonObject()) {
@@ -148,21 +150,36 @@ public class LoginController {
                                 }
                             }
 
-                            // Получаем сумму за сегодня
+                            // Получаем ВСЮ статистику за сегодня
                             if (response.has("todaysTotal")) {
                                 todaysTotal = response.get("todaysTotal").getAsDouble();
                             }
+                            if (response.has("todaysTransactions")) {
+                                todaysTransactions = response.get("todaysTransactions").getAsInt();
+                            }
+                            if (response.has("todaysLiters")) {
+                                todaysLiters = response.get("todaysLiters").getAsDouble();
+                            }
 
-                            // Сохраняем в UserSession
+                            // Отладочный вывод
+                            System.out.println("📊 Получены данные с сервера:");
+                            System.out.println("  todaysTotal: " + todaysTotal);
+                            System.out.println("  todaysTransactions: " + todaysTransactions);
+                            System.out.println("  todaysLiters: " + todaysLiters);
+
+                            // Сохраняем в UserSession ВСЕ данные (7 параметров!)
                             UserSession.initializeSession(username, role, firstName,
-                                    lastName, azsName, azsId);
-                            UserSession.setTodaysTotal(todaysTotal);
+                                    lastName, azsName, azsId,
+                                    todaysTotal, todaysTransactions, todaysLiters); // ← ВСЕ 7 параметров!
 
                             showAlert("Успех",
                                     message + "\n" +
                                             "Оператор: " + firstName + " " + lastName + "\n" +
                                             "АЗС: " + azsName + "\n" +
-                                            "Сумма за сегодня: " + String.format("%,.2f ₽", todaysTotal),
+                                            "Статистика за сегодня:\n" +
+                                            "• Сумма: " + String.format("%,.2f ₽", todaysTotal) + "\n" +
+                                            "• Транзакций: " + todaysTransactions + "\n" +
+                                            "• Литров: " + String.format("%.1f л", todaysLiters),
                                     AlertType.INFORMATION);
 
                             openMainWindow();

@@ -40,9 +40,12 @@ public class ServerManager {
             System.out.println("✅ Сервер запущен на порту: " + PORT);
             System.out.println("🌐 Доступ по: http://localhost:" + PORT);
             connectToDatabase();
+            server.createContext("/api/transactions/recent", new RecentTransactionsHandler());
         } catch (IOException e) {
             System.err.println("❌ Ошибка запуска сервера: " + e.getMessage());
         }
+
+
     }
 
     // ========== ОБРАБОТЧИК АВТОРИЗАЦИИ ==========
@@ -69,12 +72,9 @@ public class ServerManager {
                         "o.place as azs_id, a.name as azs_name, a.address as azs_address " +
                         "FROM operators o " +
                         "LEFT JOIN azs a ON o.place = a.id " +
-                        "WHERE o.username = ? AND o.password_hash = ? AND o.is_active = true"; // ИСПРАВЛЕНО: status → is_active
+                        "WHERE o.username = ? AND o.password_hash = ? AND o.is_active = true";
 
                 try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
-                    // ВАЖНО: нужно получать хеш из БД, а не создавать новый!
-                    // Сначала нужно получить хеш пароля из БД для этого пользователя
-
                     // 1. Сначала получаем хеш пароля из БД
                     String getHashSql = "SELECT password_hash FROM operators WHERE username = ?";
                     try (PreparedStatement hashStmt = getConnection().prepareStatement(getHashSql)) {
@@ -118,8 +118,11 @@ public class ServerManager {
                                     String azsName = rs.getString("azs_name");
                                     String azsAddress = rs.getString("azs_address");
 
-                                    // 3. Получаем сумму транзакций за сегодня
-                                    double todaysTotal = getTodaysTransactionsTotal(operatorId);
+                                    // 3. Получаем статистику за сегодня
+                                    JsonObject todayStats = getTodaysStats(operatorId);
+                                    double todaysTotal = todayStats.get("total_amount").getAsDouble();
+                                    int todaysTransactions = todayStats.get("transaction_count").getAsInt();
+                                    double todaysLiters = todayStats.get("total_liters").getAsDouble();
 
                                     // 4. Формируем ответ
                                     response.addProperty("success", true);
@@ -144,14 +147,21 @@ public class ServerManager {
                                     userData.add("azs", azsData);
                                     response.add("user", userData);
 
-                                    // Сумма транзакций
+                                    // Статистика за сегодня
                                     response.addProperty("todaysTotal", todaysTotal);
+                                    response.addProperty("todaysTransactions", todaysTransactions);
+                                    response.addProperty("todaysLiters", todaysLiters);
+
                                     response.addProperty("formattedTotal", String.format("%.2f ₽", todaysTotal));
+                                    response.addProperty("formattedLiters", String.format("%.1f л", todaysLiters));
 
                                     System.out.println("✅ Успешный вход: " + username);
                                     System.out.println("   Оператор: " + operatorName);
                                     System.out.println("   АЗС: " + azsName);
-                                    System.out.println("   Сумма за сегодня: " + todaysTotal + " ₽");
+                                    System.out.println("   Статистика за сегодня:");
+                                    System.out.println("   - Сумма: " + todaysTotal + " ₽");
+                                    System.out.println("   - Транзакций: " + todaysTransactions);
+                                    System.out.println("   - Литров: " + todaysLiters + " л");
 
                                 } else {
                                     // Неверные учетные данные
@@ -190,41 +200,191 @@ public class ServerManager {
             }
         }
 
-        // Метод для получения суммы транзакций за сегодня
-        private double getTodaysTransactionsTotal(int operatorId) {
-            // Сначала получаем azs_id оператора
-            String getAzsSql = "SELECT place as azs_id FROM operators WHERE id = ?";
+        // Метод для получения статистики за сегодня
+        private JsonObject getTodaysStats(int operatorId) {
+            JsonObject stats = new JsonObject();
 
-            try (PreparedStatement pstmt = getConnection().prepareStatement(getAzsSql)) {
-                pstmt.setInt(1, operatorId);
-                ResultSet rs = pstmt.executeQuery();
+            try {
+                // 1. Сначала получаем azs_id оператора
+                String getAzsSql = "SELECT place as azs_id FROM operators WHERE id = ?";
 
-                if (rs.next()) {
-                    int azsId = rs.getInt("azs_id");
+                try (PreparedStatement pstmt = getConnection().prepareStatement(getAzsSql)) {
+                    pstmt.setInt(1, operatorId);
+                    ResultSet rs = pstmt.executeQuery();
 
-                    // Теперь получаем сумму транзакций для этой АЗС за сегодня
-                    String sumSql = "SELECT COALESCE(SUM(total_amount), 0) as todays_total " +
-                            "FROM transactions " +
-                            "WHERE azs_id = ? " +
-                            "AND DATE(created_at) = CURRENT_DATE";
+                    if (rs.next()) {
+                        int azsId = rs.getInt("azs_id");
 
-                    try (PreparedStatement sumStmt = getConnection().prepareStatement(sumSql)) {
-                        sumStmt.setInt(1, azsId);
-                        ResultSet sumRs = sumStmt.executeQuery();
+                        // 2. Теперь получаем статистику для этой АЗС за сегодня
+                        String statsSql = "SELECT " +
+                                "  COALESCE(SUM(total_amount), 0) as todays_total, " +
+                                "  COUNT(*) as transaction_count, " +
+                                "  COALESCE(SUM(liters), 0) as total_liters " +  // Предполагаю, что есть поле liters
+                                "FROM transactions " +
+                                "WHERE azs_id = ? " +
+                                "AND DATE(created_at) = CURRENT_DATE";
 
-                        if (sumRs.next()) {
-                            return sumRs.getDouble("todays_total");
+                        try (PreparedStatement statsStmt = getConnection().prepareStatement(statsSql)) {
+                            statsStmt.setInt(1, azsId);
+                            ResultSet statsRs = statsStmt.executeQuery();
+
+                            if (statsRs.next()) {
+                                double totalAmount = statsRs.getDouble("todays_total");
+                                int transactionCount = statsRs.getInt("transaction_count");
+                                double totalLiters = statsRs.getDouble("total_liters");
+
+                                stats.addProperty("total_amount", totalAmount);
+                                stats.addProperty("transaction_count", transactionCount);
+                                stats.addProperty("total_liters", totalLiters);
+                                stats.addProperty("success", true);
+
+                                System.out.println("📊 Статистика за сегодня для АЗС " + azsId + ":");
+                                System.out.println("   Сумма: " + totalAmount + " ₽");
+                                System.out.println("   Транзакций: " + transactionCount);
+                                System.out.println("   Литров: " + totalLiters);
+                            } else {
+                                // Нет транзакций за сегодня
+                                stats.addProperty("total_amount", 0.0);
+                                stats.addProperty("transaction_count", 0);
+                                stats.addProperty("total_liters", 0.0);
+                                stats.addProperty("success", true);
+                                System.out.println("📊 Нет транзакций за сегодня для АЗС " + azsId);
+                            }
                         }
+                    } else {
+                        // Оператор не найден
+                        stats.addProperty("total_amount", 0.0);
+                        stats.addProperty("transaction_count", 0);
+                        stats.addProperty("total_liters", 0.0);
+                        stats.addProperty("success", false);
+                        stats.addProperty("error", "Оператор не найден");
                     }
                 }
             } catch (SQLException e) {
-                System.err.println("❌ Ошибка получения суммы транзакций: " + e.getMessage());
+                System.err.println("❌ Ошибка получения статистики: " + e.getMessage());
+                e.printStackTrace();
+                stats.addProperty("success", false);
+                stats.addProperty("error", e.getMessage());
+                // Устанавливаем значения по умолчанию
+                stats.addProperty("total_amount", 0.0);
+                stats.addProperty("transaction_count", 0);
+                stats.addProperty("total_liters", 0.0);
+            }
+
+            return stats;
+        }
+    }
+
+    static class RecentTransactionsHandler implements HttpHandler {
+
+        private String getParameter(String query, String paramName) {
+            return getParameter(query, paramName, "");
+        }
+
+        private String getParameter(String query, String paramName, String defaultValue) {
+            if (query == null || query.isEmpty()) return defaultValue;
+
+            String[] params = query.split("&");
+            for (String param : params) {
+                String[] pair = param.split("=");
+                if (pair.length >= 2 && pair[0].equals(paramName)) {
+                    return pair[1];
+                }
+            }
+            return defaultValue;
+        }
+
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            try {
+                String query = exchange.getRequestURI().getQuery();
+
+                // Проверяем наличие обязательного параметра
+                if (query == null || !query.contains("azs_id")) {
+                    sendError(exchange, 400, "Параметр azs_id обязателен");
+                    return;
+                }
+
+                // Получаем параметры
+                String azsIdStr = getParameter(query, "azs_id");
+                String limitStr = getParameter(query, "limit", "50");
+
+                int azsId = Integer.parseInt(azsIdStr);
+                int limit = Integer.parseInt(limitStr);
+
+                System.out.println("📥 Запрос транзакций для АЗС: " + azsId + ", лимит: " + limit);
+
+                JsonArray transactions = getRecentTransactions(azsId, limit);
+
+                JsonObject response = new JsonObject();
+                response.addProperty("success", true);
+                response.add("data", transactions);
+                response.addProperty("count", transactions.size());
+
+                sendJsonResponse(exchange, 200, response);
+
+            } catch (NumberFormatException e) {
+                sendError(exchange, 400, "Некорректный числовой параметр: " + e.getMessage());
+            } catch (Exception e) {
+                sendError(exchange, 500, "Ошибка сервера: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+
+        private JsonArray getRecentTransactions(int azsId, int limit) {
+            JsonArray result = new JsonArray();
+
+            String sql = "SELECT id, created_at, fuel_type, liters, total_amount, " +
+                    "payment_method, status " +
+                    "FROM transactions " +
+                    "WHERE azs_id = ? " +
+                    "ORDER BY created_at DESC " +
+                    "LIMIT ?";
+
+            try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
+                pstmt.setInt(1, azsId);
+                pstmt.setInt(2, limit);
+
+                ResultSet rs = pstmt.executeQuery();
+
+                while (rs.next()) {
+                    JsonObject trans = new JsonObject();
+                    trans.addProperty("id", rs.getInt("id"));
+
+                    // Форматируем дату
+                    java.sql.Timestamp timestamp = rs.getTimestamp("created_at");
+                    if (timestamp != null) {
+                        java.time.LocalDateTime dateTime = timestamp.toLocalDateTime();
+                        String formattedDate = dateTime.format(
+                                java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
+                        );
+                        trans.addProperty("time", formattedDate);
+                    } else {
+                        trans.addProperty("time", "Не указано");
+                    }
+
+                    trans.addProperty("fuelType", rs.getString("fuel_type"));
+                    trans.addProperty("liters", rs.getDouble("liters"));
+                    trans.addProperty("amount", rs.getDouble("total_amount"));
+                    trans.addProperty("paymentMethod", rs.getString("payment_method"));
+                    trans.addProperty("status", rs.getString("status"));
+
+                    result.add(trans);
+                }
+
+                System.out.println("✅ Загружено " + result.size() + " транзакций для АЗС " + azsId);
+
+            } catch (SQLException e) {
+                System.err.println("❌ Ошибка SQL при загрузке транзакций: " + e.getMessage());
+                System.err.println("SQL запрос: " + sql);
                 e.printStackTrace();
             }
 
-            return 0.0;
+            return result;
         }
     }
+
+
 
     // ========== ОБРАБОТЧИК АЗС ==========
     static class AzsHandler implements HttpHandler {

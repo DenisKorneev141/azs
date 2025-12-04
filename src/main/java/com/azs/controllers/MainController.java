@@ -30,6 +30,9 @@ public class MainController {
     @FXML private Label currentTimeLabel;
     @FXML private Label cashAmountLabel;
     @FXML private Label serverStatusLabel;
+    @FXML private Label totalSalesLabel;
+    @FXML private Label totalRevenueLabel;
+
     private Timeline timeline;
     @FXML
     private void initialize() {

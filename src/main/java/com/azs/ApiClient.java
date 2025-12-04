@@ -242,6 +242,47 @@ public class ApiClient {
         });
     }
 
+    // В класс ApiClient добавьте:
+    public static CompletableFuture<JsonObject> getRecentTransactions(int azsId, int limit) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                URL url = new URL(serverUrl + "/api/transactions/recent?azs_id=" + azsId + "&limit=" + limit);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("Accept", "application/json");
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
+
+                int responseCode = conn.getResponseCode();
+                if (responseCode == 200) {
+                    try (BufferedReader br = new BufferedReader(
+                            new InputStreamReader(conn.getInputStream(), "utf-8"))) {
+
+                        StringBuilder response = new StringBuilder();
+                        String responseLine;
+                        while ((responseLine = br.readLine()) != null) {
+                            response.append(responseLine.trim());
+                        }
+
+                        JsonObject jsonResponse = gson.fromJson(response.toString(), JsonObject.class);
+                        jsonResponse.addProperty("success", true);
+                        return jsonResponse;
+                    }
+                } else {
+                    JsonObject error = new JsonObject();
+                    error.addProperty("success", false);
+                    error.addProperty("message", "Ошибка: " + responseCode);
+                    return error;
+                }
+            } catch (Exception e) {
+                JsonObject error = new JsonObject();
+                error.addProperty("success", false);
+                error.addProperty("message", "Ошибка: " + e.getMessage());
+                return error;
+            }
+        });
+    }
+
     /**
      * Проверить статус сервера
      */
