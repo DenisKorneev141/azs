@@ -3,8 +3,6 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.RadioButton?>
-<?import javafx.scene.control.Tab?>
-<?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
@@ -14,77 +12,46 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane minHeight="1080.0" minWidth="1920.0" prefHeight="800" prefWidth="1200" stylesheets="@../styles/main.css" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.azs.controller.MainController">
-    
+<BorderPane minHeight="1080.0" minWidth="1920.0" prefHeight="800" prefWidth="1200" stylesheets="@../styles/main.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.azs.controllers.NewTransactionController">
+
     <!-- TOP: Шапка с информацией -->
     <top>
-        <VBox prefHeight="127.0" prefWidth="1920.0" spacing="10" style="-fx-background-color: #2c3e50;">
-            <HBox alignment="CENTER_LEFT" prefHeight="61.0" prefWidth="1920.0" spacing="20" style="-fx-padding: 15 20 10 20;">
+        <VBox prefHeight="79.0" prefWidth="1920.0" spacing="10" style="-fx-background-color: #2c3e50;">
+            <HBox alignment="CENTER_LEFT" prefHeight="50.0" prefWidth="1920.0" spacing="20" style="-fx-padding: 15 20 10 20;">
                 <!-- Логотип и название -->
                 <HBox alignment="CENTER_LEFT" prefHeight="49.0" prefWidth="211.0" spacing="15">
-               <ImageView fitHeight="150.0" fitWidth="200.0" pickOnBounds="true" preserveRatio="true">
-                  <image>
-                     <Image url="@../images/Logo_white.png" />
-                  </image>
-               </ImageView>
+                    <ImageView fitHeight="150.0" fitWidth="200.0" pickOnBounds="true" preserveRatio="true">
+                        <image>
+                            <Image url="@../images/Logo_white.png" />
+                        </image>
+                    </ImageView>
                     <ImageView fitHeight="40" fitWidth="40" preserveRatio="true">
                         <Image url="@../images/azs_logo.png" />
                     </ImageView>
                     <VBox spacing="2" />
                 </HBox>
-                
-                   <!-- Время и действия -->
+
+                <!-- Время и действия -->
                 <HBox alignment="TOP_RIGHT" maxWidth="1500.0" prefHeight="79.0" prefWidth="1500.0" spacing="15" HBox.hgrow="ALWAYS">
-                     <Label prefHeight="51.0" prefWidth="796.0" style="-fx-text-fill: white; -fx-font-size: 28px; -fx-font-weight: bold;" text="Система управления АЗС | Новая транзакция">
-                  <font>
-                     <Font name="Tahoma" size="32.0" />
-                  </font>
-               </Label>
-                   
-                      <!-- Информация о смене -->
-                   <HBox alignment="CENTER" spacing="30" style="-fx-padding: 0 0 0 50;">
-                       <VBox alignment="CENTER" spacing="2" />
-                       <VBox alignment="CENTER" spacing="2" />
-                       <VBox alignment="CENTER" spacing="2" />
-                   </HBox>
-                    <Label fx:id="currentTimeLabel" prefHeight="50.0" prefWidth="120.0" style="-fx-text-fill: #ecf0f1; -fx-font-size: 15px;" text="14:30 15.01.2024">
-                  <font>
-                     <Font name="Tahoma Bold" size="20.0" />
-                  </font>
-               </Label>
-                    <Button prefHeight="52.0" prefWidth="123.0" style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 5 15; -fx-border-radius: 20; -fx-background-radius: 10;" text="Выход">
-                  <font>
-                     <Font name="Tahoma Bold" size="17.0" />
-                  </font>
-               </Button>
+                    <Label prefHeight="51.0" prefWidth="796.0" style="-fx-text-fill: white; -fx-font-size: 28px; -fx-font-weight: bold;" text="Система управления АЗС | Новая транзакция">
+                        <font>
+                            <Font name="Tahoma" size="32.0" />
+                        </font>
+                    </Label>
+
+                    <!-- Информация о смене -->
+                    <HBox alignment="CENTER" spacing="30" style="-fx-padding: 0 0 0 50;">
+                        <VBox alignment="CENTER" spacing="2" />
+                        <VBox alignment="CENTER" spacing="2" />
+                        <VBox alignment="CENTER" spacing="2" />
+                    </HBox>
+                    <Button fx:id="btnExit" prefHeight="52.0" prefWidth="123.0" style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 5 15; -fx-border-radius: 20; -fx-background-radius: 10;" text="Выход">
+                        <font>
+                            <Font name="Tahoma Bold" size="17.0" />
+                        </font>
+                    </Button>
                 </HBox>
             </HBox>
-            
-            <!-- Навигационные вкладки -->
-            <TabPane prefHeight="54.0" prefWidth="1920.0" style="-fx-background-color: transparent; -fx-border-width: 0; -fx-font-size: 16;" tabClosingPolicy="UNAVAILABLE">
-                <tabs>
-                    <Tab text="🏠 Продажи">
-                        <content>
-                            <!-- Контент будет загружаться динамически -->
-                        </content>
-                    </Tab>
-                    <Tab text="⛽ Колонки">
-                        <content>
-                            <!-- Контент будет загружаться динамически -->
-                        </content>
-                    </Tab>
-                    <Tab text="💰 Цены">
-                        <content>
-                            <!-- Контент будет загружаться динамически -->
-                        </content>
-                    </Tab>
-                    <Tab text="📊 Отчеты">
-                        <content>
-                            <!-- Контент будет загружаться динамически -->
-                        </content>
-                    </Tab>
-                </tabs>
-            </TabPane>
         </VBox>
     </top>
 
@@ -92,293 +59,294 @@
     <center>
         <StackPane fx:id="mainContentPane" prefHeight="857.0" prefWidth="1950.0">
             <!-- Здесь будет динамически загружаться контент вкладок -->
-            
+
             <!-- Стартовый экран - быстрый доступ -->
-            <VBox alignment="CENTER" prefHeight="902.0" prefWidth="1950.0" spacing="30" style="-fx-padding: 50;">
-                
+            <VBox alignment="CENTER" prefHeight="970.0" prefWidth="1950.0" spacing="30" style="-fx-padding: 50;">
+
                 <HBox alignment="BASELINE_CENTER" prefHeight="414.0" prefWidth="1850.0" spacing="30">
-               <children>
-                  <VBox minHeight="380.0" minWidth="440.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
-                     <children>
-                        <Label style="-fx-font-size: 35; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Шаг 1. Выбор топлива" />
-                        <RadioButton mnemonicParsing="false" style="-fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="АИ - 92">
-                           <font>
-                              <Font name="Tahoma" size="31.0" />
-                           </font>
-                        </RadioButton>
-                        <RadioButton mnemonicParsing="false" style="-fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="АИ - 95">
-                           <font>
-                              <Font name="Tahoma" size="31.0" />
-                           </font>
-                        </RadioButton>
-                        <RadioButton mnemonicParsing="false" style="-fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="АИ - 98">
-                           <font>
-                              <Font name="Tahoma" size="31.0" />
-                           </font>
-                        </RadioButton>
-                        <RadioButton mnemonicParsing="false" style="-fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="АИ - 100">
-                           <font>
-                              <Font name="Tahoma" size="31.0" />
-                           </font>
-                        </RadioButton>
-                        <RadioButton mnemonicParsing="false" style="-fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="ДТ - К5">
-                           <font>
-                              <Font name="Tahoma" size="31.0" />
-                           </font>
-                        </RadioButton>
-                     </children>
-                  </VBox>
-                  <VBox minHeight="380.0" minWidth="440.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
-                     <children>
-                        <Label style="-fx-font-size: 35; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="     Шаг 2. Количество" />
-                        <Label style="-fx-font-size: 35; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
-                        <TextField prefHeight="63.0" prefWidth="409.0" promptText="Сумма в рублях">
-                           <font>
-                              <Font name="System Bold Italic" size="26.0" />
-                           </font>
-                        </TextField>
-                        <Label alignment="CENTER" prefHeight="51.0" prefWidth="402.0" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="или">
-                           <font>
-                              <Font name="System Italic" size="12.0" />
-                           </font>
-                        </Label>
-                        <TextField prefHeight="63.0" prefWidth="409.0" promptText="Количество литров">
-                           <font>
-                              <Font name="System Bold Italic" size="26.0" />
-                           </font>
-                        </TextField>
-                     </children>
-                  </VBox>
-                  <VBox minHeight="380.0" minWidth="440.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
-                     <children>
-                        <Label style="-fx-font-size: 35; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Шаг 3. Выбор колонки" />
-                        <BorderPane prefHeight="57.0" prefWidth="400.0">
-                           <left>
-                              <Label style="-fx-text-fill: #2c3e50; -fx-font-weight: bold; -fx-font-size: 30;" text="№1" BorderPane.alignment="CENTER" />
-                           </left>
-                           <center>
-                              <Label style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #6CD963;" text="Свободна" BorderPane.alignment="CENTER" />
-                           </center>
-                           <right>
-                              <RadioButton mnemonicParsing="false" style="-fx-font-size: 25; -fx-font-weight: bold;" BorderPane.alignment="CENTER">
-                                 <font>
-                                    <Font name="Tahoma" size="31.0" />
-                                 </font>
-                              </RadioButton>
-                           </right>
-                        </BorderPane>
-                        <BorderPane prefHeight="57.0" prefWidth="400.0">
-                           <left>
-                              <Label style="-fx-text-fill: #2c3e50; -fx-font-weight: bold; -fx-font-size: 30;" text="№2" BorderPane.alignment="CENTER" />
-                           </left>
-                           <center>
-                              <Label style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #D3D920;" text="Заправка.." BorderPane.alignment="CENTER" />
-                           </center>
-                           <right>
-                              <RadioButton mnemonicParsing="false" style="-fx-font-size: 25; -fx-font-weight: bold;" BorderPane.alignment="CENTER">
-                                 <font>
-                                    <Font name="Tahoma" size="31.0" />
-                                 </font>
-                              </RadioButton>
-                           </right>
-                        </BorderPane>
-                        <BorderPane prefHeight="57.0" prefWidth="400.0">
-                           <left>
-                              <Label style="-fx-text-fill: #2c3e50; -fx-font-weight: bold; -fx-font-size: 30;" text="№3" BorderPane.alignment="CENTER" />
-                           </left>
-                           <center>
-                              <Label style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #e74c3c;" text="Неактивна" BorderPane.alignment="CENTER" />
-                           </center>
-                           <right>
-                              <RadioButton mnemonicParsing="false" style="-fx-font-size: 25; -fx-font-weight: bold;" BorderPane.alignment="CENTER">
-                                 <font>
-                                    <Font name="Tahoma" size="31.0" />
-                                 </font>
-                              </RadioButton>
-                           </right>
-                        </BorderPane>
-                        <BorderPane prefHeight="57.0" prefWidth="400.0">
-                           <left>
-                              <Label style="-fx-text-fill: #2c3e50; -fx-font-weight: bold; -fx-font-size: 30;" text="№4" BorderPane.alignment="CENTER" />
-                           </left>
-                           <center>
-                              <Label style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #6CD963;" text="Свободна" BorderPane.alignment="CENTER" />
-                           </center>
-                           <right>
-                              <RadioButton mnemonicParsing="false" style="-fx-font-size: 25; -fx-font-weight: bold;" BorderPane.alignment="CENTER">
-                                 <font>
-                                    <Font name="Tahoma" size="31.0" />
-                                 </font>
-                              </RadioButton>
-                           </right>
-                        </BorderPane>
-                     </children>
-                  </VBox>
-                  <VBox minHeight="380.0" minWidth="440.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
-                     <children>
-                        <Label style="-fx-font-size: 35; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Итоговая стоимость" />
-                        <BorderPane prefHeight="57.0" prefWidth="400.0">
-                           <left>
-                              <Label style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Топливо: " BorderPane.alignment="CENTER" />
-                           </left>
-                           <right>
-                              <Label alignment="CENTER_RIGHT" prefHeight="45.0" prefWidth="172.0" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="АИ - 95" BorderPane.alignment="CENTER" />
-                           </right>
-                        </BorderPane>
-                        <BorderPane prefHeight="57.0" prefWidth="400.0">
-                           <left>
-                              <Label style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Цена:" BorderPane.alignment="CENTER" />
-                           </left>
-                           <right>
-                              <Label alignment="CENTER_RIGHT" prefHeight="45.0" prefWidth="172.0" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="2,60 BYN" BorderPane.alignment="CENTER" />
-                           </right>
-                        </BorderPane>
-                        <BorderPane prefHeight="57.0" prefWidth="400.0">
-                           <left>
-                              <Label style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Количество:" BorderPane.alignment="CENTER" />
-                           </left>
-                           <right>
-                              <Label alignment="CENTER_RIGHT" prefHeight="45.0" prefWidth="172.0" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="15 л." BorderPane.alignment="CENTER" />
-                           </right>
-                        </BorderPane>
-                        <BorderPane prefHeight="57.0" prefWidth="400.0">
-                           <left>
-                              <Label style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="ИТОГО:" BorderPane.alignment="CENTER" />
-                           </left>
-                           <right>
-                              <Label alignment="CENTER_RIGHT" prefHeight="45.0" prefWidth="172.0" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="39 BYN" BorderPane.alignment="CENTER" />
-                           </right>
-                        </BorderPane>
-                     </children>
-                  </VBox>
-               </children>
+                    <children>
+                        <VBox minHeight="380.0" minWidth="440.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+                            <children>
+                                <Label style="-fx-font-size: 35; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Шаг 1. Выбор топлива" />
+                                <RadioButton fx:id="rbFuel92" mnemonicParsing="false" style="-fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="АИ - 92">
+                                    <font>
+                                        <Font name="Tahoma" size="31.0" />
+                                    </font>
+                                </RadioButton>
+                                <RadioButton fx:id="rbFuel95" mnemonicParsing="false" style="-fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="АИ - 95">
+                                    <font>
+                                        <Font name="Tahoma" size="31.0" />
+                                    </font>
+                                </RadioButton>
+                                <RadioButton fx:id="rbFuel98" mnemonicParsing="false" style="-fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="АИ - 98">
+                                    <font>
+                                        <Font name="Tahoma" size="31.0" />
+                                    </font>
+                                </RadioButton>
+                                <RadioButton fx:id="rbFuel100" mnemonicParsing="false" style="-fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="АИ - 100">
+                                    <font>
+                                        <Font name="Tahoma" size="31.0" />
+                                    </font>
+                                </RadioButton>
+                                <RadioButton fx:id="rbFuelDT" mnemonicParsing="false" style="-fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="ДТ - К5">
+                                    <font>
+                                        <Font name="Tahoma" size="31.0" />
+                                    </font>
+                                </RadioButton>
+                            </children>
+                        </VBox>
+                        <VBox minHeight="380.0" minWidth="440.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+                            <children>
+                                <Label style="-fx-font-size: 35; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="     Шаг 2. Количество" />
+                                <Label style="-fx-font-size: 35; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
+                                <TextField fx:id="tfAmount" prefHeight="63.0" prefWidth="409.0" promptText="Сумма в рублях">
+                                    <font>
+                                        <Font name="System Bold Italic" size="26.0" />
+                                    </font>
+                                </TextField>
+                                <Label alignment="CENTER" prefHeight="51.0" prefWidth="402.0" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="или">
+                                    <font>
+                                        <Font name="System Italic" size="12.0" />
+                                    </font>
+                                </Label>
+                                <TextField fx:id="tfLiters" prefHeight="63.0" prefWidth="409.0" promptText="Количество литров">
+                                    <font>
+                                        <Font name="System Bold Italic" size="26.0" />
+                                    </font>
+                                </TextField>
+                            </children>
+                        </VBox>
+                        <VBox minHeight="380.0" minWidth="440.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+                            <children>
+                                <Label style="-fx-font-size: 35; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Шаг 3. Выбор колонки" />
+                                <BorderPane prefHeight="57.0" prefWidth="400.0">
+                                    <left>
+                                        <Label style="-fx-text-fill: #2c3e50; -fx-font-weight: bold; -fx-font-size: 30;" text="№1" BorderPane.alignment="CENTER" />
+                                    </left>
+                                    <center>
+                                        <Label fx:id="lblNozzle1Status" style="-fx-font-size: 30; -fx-font-weight: bold;" text="Свободна" BorderPane.alignment="CENTER" />
+                                    </center>
+                                    <right>
+                                        <RadioButton fx:id="rbNozzle1" mnemonicParsing="false" style="-fx-font-size: 25; -fx-font-weight: bold;" BorderPane.alignment="CENTER">
+                                            <font>
+                                                <Font name="Tahoma" size="31.0" />
+                                            </font>
+                                        </RadioButton>
+                                    </right>
+                                </BorderPane>
+                                <BorderPane prefHeight="57.0" prefWidth="400.0">
+                                    <left>
+                                        <Label style="-fx-text-fill: #2c3e50; -fx-font-weight: bold; -fx-font-size: 30;" text="№2" BorderPane.alignment="CENTER" />
+                                    </left>
+                                    <center>
+                                        <Label fx:id="lblNozzle2Status" style="-fx-font-size: 30; -fx-font-weight: bold;" text="Заправка.." BorderPane.alignment="CENTER" />
+                                    </center>
+                                    <right>
+                                        <RadioButton fx:id="rbNozzle2" mnemonicParsing="false" style="-fx-font-size: 25; -fx-font-weight: bold;" BorderPane.alignment="CENTER">
+                                            <font>
+                                                <Font name="Tahoma" size="31.0" />
+                                            </font>
+                                        </RadioButton>
+                                    </right>
+                                </BorderPane>
+                                <BorderPane prefHeight="57.0" prefWidth="400.0">
+                                    <left>
+                                        <Label style="-fx-text-fill: #2c3e50; -fx-font-weight: bold; -fx-font-size: 30;" text="№3" BorderPane.alignment="CENTER" />
+                                    </left>
+                                    <center>
+                                        <Label fx:id="lblNozzle3Status" style="-fx-font-size: 30; -fx-font-weight: bold;" text="Неактивна" BorderPane.alignment="CENTER" />
+                                    </center>
+                                    <right>
+                                        <RadioButton fx:id="rbNozzle3" mnemonicParsing="false" style="-fx-font-size: 25; -fx-font-weight: bold;" BorderPane.alignment="CENTER">
+                                            <font>
+                                                <Font name="Tahoma" size="31.0" />
+                                            </font>
+                                        </RadioButton>
+                                    </right>
+                                </BorderPane>
+                                <BorderPane prefHeight="57.0" prefWidth="400.0">
+                                    <left>
+                                        <Label style="-fx-text-fill: #2c3e50; -fx-font-weight: bold; -fx-font-size: 30;" text="№4" BorderPane.alignment="CENTER" />
+                                    </left>
+                                    <center>
+                                        <Label fx:id="lblNozzle4Status" style="-fx-font-size: 30; -fx-font-weight: bold;" text="Свободна" BorderPane.alignment="CENTER" />
+                                    </center>
+                                    <right>
+                                        <RadioButton fx:id="rbNozzle4" mnemonicParsing="false" style="-fx-font-size: 25; -fx-font-weight: bold;" BorderPane.alignment="CENTER">
+                                            <font>
+                                                <Font name="Tahoma" size="31.0" />
+                                            </font>
+                                        </RadioButton>
+                                    </right>
+                                </BorderPane>
+                            </children>
+                        </VBox>
+                        <VBox minHeight="380.0" minWidth="440.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+                            <children>
+                                <Label style="-fx-font-size: 35; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Итоговая стоимость" />
+                                <BorderPane prefHeight="57.0" prefWidth="400.0">
+                                    <left>
+                                        <Label style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Топливо: " BorderPane.alignment="CENTER" />
+                                    </left>
+                                    <right>
+                                        <Label fx:id="lblTotalFuelType" alignment="CENTER_RIGHT" prefHeight="45.0" prefWidth="172.0" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="АИ - 95" BorderPane.alignment="CENTER" />
+                                    </right>
+                                </BorderPane>
+                                <BorderPane prefHeight="57.0" prefWidth="400.0">
+                                    <left>
+                                        <Label style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Цена:" BorderPane.alignment="CENTER" />
+                                    </left>
+                                    <right>
+                                        <Label fx:id="lblTotalPrice" alignment="CENTER_RIGHT" prefHeight="45.0" prefWidth="172.0" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="2,60 BYN" BorderPane.alignment="CENTER" />
+                                    </right>
+                                </BorderPane>
+                                <BorderPane prefHeight="57.0" prefWidth="400.0">
+                                    <left>
+                                        <Label style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Количество:" BorderPane.alignment="CENTER" />
+                                    </left>
+                                    <right>
+                                        <Label fx:id="lblTotalLiters" alignment="CENTER_RIGHT" prefHeight="45.0" prefWidth="172.0" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="15 л." BorderPane.alignment="CENTER" />
+                                    </right>
+                                </BorderPane>
+                                <BorderPane prefHeight="57.0" prefWidth="400.0">
+                                    <left>
+                                        <Label style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="ИТОГО:" BorderPane.alignment="CENTER" />
+                                    </left>
+                                    <right>
+                                        <Label fx:id="lblTotalAmount" alignment="CENTER_RIGHT" prefHeight="45.0" prefWidth="172.0" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="39 BYN" BorderPane.alignment="CENTER" />
+                                    </right>
+                                </BorderPane>
+                            </children>
+                        </VBox>
+                    </children>
                 </HBox>
-            <VBox alignment="CENTER" minHeight="209.0" minWidth="440.0" prefHeight="386.0" prefWidth="1850.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
-               <children>
-                  <BorderPane prefHeight="369.0" prefWidth="1840.0">
-                     <top>
-                        <Label prefHeight="51.0" prefWidth="358.0" style="-fx-text-fill: #2c3e50; -fx-font-size: 35px; -fx-font-weight: bold;" text="Окно оплаты заказа" BorderPane.alignment="CENTER">
-                           <font>
-                              <Font name="Tahoma" size="32.0" />
-                           </font>
-                        </Label>
-                     </top>
-                     <center>
-                        <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0" BorderPane.alignment="CENTER">
-                           <children>
-                              <VBox alignment="CENTER" minHeight="188.0" minWidth="409.0" prefHeight="194.0" prefWidth="409.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
-                                 <children>
-                                    <Label alignment="CENTER" prefHeight="51.0" prefWidth="402.0" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="1. Бонусная карта">
-                                       <font>
-                                          <Font name="System Italic" size="12.0" />
-                                       </font>
-                                    </Label>
-                                    <TextField prefHeight="56.0" prefWidth="393.0" promptText="Номер телефона клиента">
-                                       <font>
-                                          <Font name="System Bold Italic" size="24.0" />
-                                       </font>
-                                    </TextField>
-                                    <Button prefHeight="45.0" prefWidth="378.0" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6;" text="Подтвердить">
-                                       <font>
-                                          <Font name="Tahoma Bold" size="23.0" />
-                                       </font>
-                                    </Button>
-                                    <Label style="-fx-font-size: 35; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
-                                 </children>
-                              </VBox>
-                              <VBox minHeight="188.0" minWidth="409.0" prefHeight="194.0" prefWidth="409.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
-                                 <children>
-                                    <Label alignment="CENTER" prefHeight="51.0" prefWidth="402.0" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="2. Расчет">
-                                       <font>
-                                          <Font name="System Italic" size="12.0" />
-                                       </font>
-                                    </Label>
-                                    <TextField prefHeight="56.0" prefWidth="393.0" promptText="Внесено наличных">
-                                       <font>
-                                          <Font name="System Bold Italic" size="24.0" />
-                                       </font>
-                                    </TextField>
-                                    <TextField prefHeight="56.0" prefWidth="393.0" promptText="Списать бонусов">
-                                       <font>
-                                          <Font name="System Bold Italic" size="24.0" />
-                                       </font>
-                                    </TextField>
-                                    <Button prefHeight="45.0" prefWidth="378.0" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6;" text="Подтвердить">
-                                       <font>
-                                          <Font name="Tahoma Bold" size="23.0" />
-                                       </font>
-                                    </Button>
-                                    <Label style="-fx-font-size: 35; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
-                                 </children>
-                              </VBox>
-                              <VBox minHeight="188.0" minWidth="409.0" prefHeight="194.0" prefWidth="409.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
-                                 <children>
-                                    <Label alignment="CENTER" prefHeight="51.0" prefWidth="402.0" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="3. Проверка">
-                                       <font>
-                                          <Font name="System Italic" size="12.0" />
-                                       </font>
-                                    </Label>
-                                    <BorderPane prefHeight="35.0" prefWidth="369.0">
-                                       <left>
-                                          <Label style="-fx-font-size: 25; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Итого:" BorderPane.alignment="CENTER" />
-                                       </left>
-                                       <right>
-                                          <Label alignment="CENTER_RIGHT" prefHeight="45.0" prefWidth="172.0" style="-fx-font-size: 25; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="39 BYN" BorderPane.alignment="CENTER" />
-                                       </right>
-                                    </BorderPane>
-                                    <BorderPane prefHeight="35.0" prefWidth="369.0">
-                                       <left>
-                                          <Label style="-fx-font-size: 25; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Внесено:" BorderPane.alignment="CENTER" />
-                                       </left>
-                                       <right>
-                                          <Label alignment="CENTER_RIGHT" prefHeight="45.0" prefWidth="172.0" style="-fx-font-size: 25; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="40 BYN" BorderPane.alignment="CENTER" />
-                                       </right>
-                                    </BorderPane>
-                                    <BorderPane prefHeight="35.0" prefWidth="369.0">
-                                       <left>
-                                          <Label style="-fx-font-size: 25; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Бонусами:" BorderPane.alignment="CENTER" />
-                                       </left>
-                                       <right>
-                                          <Label alignment="CENTER_RIGHT" prefHeight="45.0" prefWidth="172.0" style="-fx-font-size: 25; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="2,50 BYN" BorderPane.alignment="CENTER" />
-                                       </right>
-                                    </BorderPane>
-                                    <BorderPane prefHeight="35.0" prefWidth="369.0">
-                                       <left>
-                                          <Label style="-fx-font-size: 25; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Сдача:" BorderPane.alignment="CENTER" />
-                                       </left>
-                                       <right>
-                                          <Label alignment="CENTER_RIGHT" prefHeight="45.0" prefWidth="172.0" style="-fx-font-size: 25; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="3,50 BYN" BorderPane.alignment="CENTER" />
-                                       </right>
-                                    </BorderPane>
-                                    <Label style="-fx-font-size: 35; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
-                                 </children>
-                              </VBox>
-                              <VBox minHeight="188.0" minWidth="409.0" prefHeight="194.0" prefWidth="409.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
-                                 <children>
-                                    <Label alignment="CENTER" prefHeight="51.0" prefWidth="402.0" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="4. Оплата заказа">
-                                       <font>
-                                          <Font name="System Italic" size="12.0" />
-                                       </font>
-                                    </Label>
-                                    <Label style="-fx-font-size: 35; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
-                                    <Button prefHeight="45.0" prefWidth="378.0" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6;" text="Оплатить наличными">
-                                       <font>
-                                          <Font name="Tahoma Bold" size="23.0" />
-                                       </font>
-                                    </Button>
-                                    <Button prefHeight="45.0" prefWidth="378.0" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6;" text="Оплатить картой">
-                                       <font>
-                                          <Font name="Tahoma Bold" size="23.0" />
-                                       </font>
-                                    </Button>
-                                 </children>
-                              </VBox>
-                           </children>
-                        </HBox>
-                     </center>
-                  </BorderPane>
-               </children>
-            </VBox>
+
+                <VBox alignment="CENTER" minHeight="209.0" minWidth="440.0" prefHeight="386.0" prefWidth="1850.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+                    <children>
+                        <BorderPane prefHeight="369.0" prefWidth="1840.0">
+                            <top>
+                                <Label prefHeight="51.0" prefWidth="358.0" style="-fx-text-fill: #2c3e50; -fx-font-size: 35px; -fx-font-weight: bold;" text="Окно оплаты заказа" BorderPane.alignment="CENTER">
+                                    <font>
+                                        <Font name="Tahoma" size="32.0" />
+                                    </font>
+                                </Label>
+                            </top>
+                            <center>
+                                <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+                                    <children>
+                                        <VBox alignment="CENTER" minHeight="188.0" minWidth="409.0" prefHeight="194.0" prefWidth="409.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+                                            <children>
+                                                <Label alignment="CENTER" prefHeight="51.0" prefWidth="402.0" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="1. Бонусная карта">
+                                                    <font>
+                                                        <Font name="System Italic" size="12.0" />
+                                                    </font>
+                                                </Label>
+                                                <TextField fx:id="tfPhone" prefHeight="56.0" prefWidth="393.0" promptText="Номер телефона клиента">
+                                                    <font>
+                                                        <Font name="System Bold Italic" size="24.0" />
+                                                    </font>
+                                                </TextField>
+                                                <Button fx:id="btnFindClient" prefHeight="45.0" prefWidth="378.0" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6;" text="Подтвердить">
+                                                    <font>
+                                                        <Font name="Tahoma Bold" size="23.0" />
+                                                    </font>
+                                                </Button>
+                                                <Label fx:id="lblClientName" style="-fx-font-size: 25; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Гость" />
+                                            </children>
+                                        </VBox>
+                                        <VBox minHeight="188.0" minWidth="409.0" prefHeight="194.0" prefWidth="409.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+                                            <children>
+                                                <Label alignment="CENTER" prefHeight="51.0" prefWidth="402.0" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="2. Расчет">
+                                                    <font>
+                                                        <Font name="System Italic" size="12.0" />
+                                                    </font>
+                                                </Label>
+                                                <TextField fx:id="tfCashIn" prefHeight="56.0" prefWidth="393.0" promptText="Внесено наличных">
+                                                    <font>
+                                                        <Font name="System Bold Italic" size="24.0" />
+                                                    </font>
+                                                </TextField>
+                                                <TextField fx:id="tfBonusSpend" prefHeight="56.0" prefWidth="393.0" promptText="Списать бонусов">
+                                                    <font>
+                                                        <Font name="System Bold Italic" size="24.0" />
+                                                    </font>
+                                                </TextField>
+                                                <Button fx:id="btnCalculate" prefHeight="45.0" prefWidth="378.0" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6;" text="Подтвердить">
+                                                    <font>
+                                                        <Font name="Tahoma Bold" size="23.0" />
+                                                    </font>
+                                                </Button>
+                                                <Label fx:id="lblClientInfo" style="-fx-font-size: 25; -fx-font-weight: bold;" />
+                                            </children>
+                                        </VBox>
+                                        <VBox minHeight="188.0" minWidth="409.0" prefHeight="194.0" prefWidth="409.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+                                            <children>
+                                                <Label alignment="CENTER" prefHeight="51.0" prefWidth="402.0" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="3. Проверка">
+                                                    <font>
+                                                        <Font name="System Italic" size="12.0" />
+                                                    </font>
+                                                </Label>
+                                                <BorderPane prefHeight="35.0" prefWidth="369.0">
+                                                    <left>
+                                                        <Label style="-fx-font-size: 25; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Итого:" BorderPane.alignment="CENTER" />
+                                                    </left>
+                                                    <right>
+                                                        <Label fx:id="lblCheckTotal" alignment="CENTER_RIGHT" prefHeight="45.0" prefWidth="172.0" style="-fx-font-size: 25; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="0.00 BYN" BorderPane.alignment="CENTER" />
+                                                    </right>
+                                                </BorderPane>
+                                                <BorderPane prefHeight="35.0" prefWidth="369.0">
+                                                    <left>
+                                                        <Label style="-fx-font-size: 25; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Внесено:" BorderPane.alignment="CENTER" />
+                                                    </left>
+                                                    <right>
+                                                        <Label fx:id="lblCheckCashIn" alignment="CENTER_RIGHT" prefHeight="45.0" prefWidth="172.0" style="-fx-font-size: 25; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="0.00 BYN" BorderPane.alignment="CENTER" />
+                                                    </right>
+                                                </BorderPane>
+                                                <BorderPane prefHeight="35.0" prefWidth="369.0">
+                                                    <left>
+                                                        <Label style="-fx-font-size: 25; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Бонусами:" BorderPane.alignment="CENTER" />
+                                                    </left>
+                                                    <right>
+                                                        <Label fx:id="lblCheckBonus" alignment="CENTER_RIGHT" prefHeight="45.0" prefWidth="172.0" style="-fx-font-size: 25; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="0.00 BYN" BorderPane.alignment="CENTER" />
+                                                    </right>
+                                                </BorderPane>
+                                                <BorderPane prefHeight="35.0" prefWidth="369.0">
+                                                    <left>
+                                                        <Label style="-fx-font-size: 25; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Сдача:" BorderPane.alignment="CENTER" />
+                                                    </left>
+                                                    <right>
+                                                        <Label fx:id="lblCheckChange" alignment="CENTER_RIGHT" prefHeight="45.0" prefWidth="172.0" style="-fx-font-size: 25; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="0.00 BYN" BorderPane.alignment="CENTER" />
+                                                    </right>
+                                                </BorderPane>
+                                                <Label fx:id="lblBonusBalance" style="-fx-font-size: 22; -fx-font-weight: bold; -fx-text-fill: #27ae60;" />
+                                            </children>
+                                        </VBox>
+                                        <VBox minHeight="188.0" minWidth="409.0" prefHeight="194.0" prefWidth="409.0" spacing="15" style="-fx-padding: 20; -fx-background-color: #ecf0f1; -fx-background-radius: 10;">
+                                            <children>
+                                                <Label alignment="CENTER" prefHeight="51.0" prefWidth="402.0" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="4. Оплата заказа">
+                                                    <font>
+                                                        <Font name="System Italic" size="12.0" />
+                                                    </font>
+                                                </Label>
+                                                <Label fx:id="statusLabel" style="-fx-font-size: 20; -fx-font-weight: bold; -fx-text-fill: #3498db;" text="Готов к работе" />
+                                                <Button fx:id="btnPayCash" prefHeight="45.0" prefWidth="378.0" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6;" text="Оплатить наличными">
+                                                    <font>
+                                                        <Font name="Tahoma Bold" size="23.0" />
+                                                    </font>
+                                                </Button>
+                                                <Button fx:id="btnPayCard" prefHeight="45.0" prefWidth="378.0" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6;" text="Оплатить картой">
+                                                    <font>
+                                                        <Font name="Tahoma Bold" size="23.0" />
+                                                    </font>
+                                                </Button>
+                                            </children>
+                                        </VBox>
+                                    </children>
+                                </HBox>
+                            </center>
+                        </BorderPane>
+                    </children>
+                </VBox>
             </VBox>
         </StackPane>
     </center>
@@ -386,10 +354,10 @@
     <!-- BOTTOM: Статус бар -->
     <bottom>
         <HBox alignment="CENTER_LEFT" spacing="20" style="-fx-background-color: #34495e; -fx-padding: 8 15;">
-            <Label fx:id="statusLabel" style="-fx-text-fill: #ecf0f1; -fx-font-size: 12px;" text="Сеть автозаправочных станций PHAETON" />
+            <Label fx:id="serverStatusLabel" style="-fx-text-fill: #ecf0f1; -fx-font-size: 12px;" text="Сеть автозаправочных станций PHAETON" />
             <HBox alignment="CENTER_RIGHT" spacing="10" HBox.hgrow="ALWAYS">
                 <Label style="-fx-text-fill: #bdc3c7; -fx-font-size: 11px;" text="Сервер:" />
-                <Label fx:id="serverStatusLabel" style="-fx-text-fill: #2ecc71; -fx-font-size: 11px;" text="🟢 Online" />
+                <Label fx:id="lblServerStatus" style="-fx-text-fill: #2ecc71; -fx-font-size: 11px;" text="🟢 Online" />
             </HBox>
         </HBox>
     </bottom>

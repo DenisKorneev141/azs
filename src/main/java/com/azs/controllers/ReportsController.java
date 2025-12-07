@@ -10,7 +10,6 @@ import javafx.stage.FileChooser;
 import com.azs.ApiClient;
 import com.azs.model.UserSession;
 import com.azs.export.ExcelExporter;
-import com.azs.export.CsvExporter;
 import com.azs.export.HtmlExporter;
 import com.google.gson.JsonObject;
 import java.io.File;
@@ -29,7 +28,6 @@ public class ReportsController {
     @FXML private Button yearlyReportButton;
 
     @FXML private Button exportExcelButton;
-    @FXML private Button exportCsvButton;
     @FXML private Button exportHtmlButton;
 
     @FXML private Label totalRevenueLabel;
@@ -70,7 +68,6 @@ public class ReportsController {
         yearlyReportButton.setOnAction(e -> generateYearlyReport());
 
         exportExcelButton.setOnAction(e -> exportToExcel());
-        exportCsvButton.setOnAction(e -> exportToCsv());
         exportHtmlButton.setOnAction(e -> exportToHtml());
     }
 
@@ -157,7 +154,6 @@ public class ReportsController {
     }
 
     private void updateReportUI(JsonObject reportData) {
-
         try {
             // Основная статистика
             double totalRevenue = reportData.get("total_revenue").getAsDouble();
@@ -219,16 +215,16 @@ public class ReportsController {
         }
 
         FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Сохранить отчет как Excel (XML)");
+        fileChooser.setTitle("Сохранить отчет в Excel");
         fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Excel XML Files", "*.xml"),
+                new FileChooser.ExtensionFilter("Excel Files", "*.xlsx"),
                 new FileChooser.ExtensionFilter("All Files", "*.*")
         );
 
         // Генерируем имя файла по умолчанию
         LocalDate startDate = reportStartDate.getValue();
         LocalDate endDate = reportEndDate.getValue();
-        String defaultFileName = String.format("Отчет_АЗС_%d_%s_%s.xml",
+        String defaultFileName = String.format("Отчет_АЗС_%d_%s_%s.xlsx",
                 azsId,
                 startDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")),
                 endDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
@@ -239,54 +235,9 @@ public class ReportsController {
         if (file != null) {
             try {
                 ExcelExporter.exportReport(currentReportData, file, startDate, endDate, UserSession.getAzsName());
-                showInfo("Успех", "Отчет успешно экспортирован в Excel XML формат.\n" +
+                showInfo("Успех", "Отчет успешно экспортирован в Excel!\n" +
                         "Файл: " + file.getAbsolutePath() + "\n\n" +
-                        "Для открытия в Excel:\n" +
-                        "1. Откройте Excel\n" +
-                        "2. Файл → Открыть\n" +
-                        "3. Выберите этот XML файл\n" +
-                        "4. Сохраните как .xlsx если нужно");
-            } catch (Exception e) {
-                showError("Ошибка экспорта", "Не удалось экспортировать отчет: " + e.getMessage());
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private void exportToCsv() {
-        if (currentReportData == null) {
-            showError("Ошибка", "Сначала сформируйте отчет");
-            return;
-        }
-
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Сохранить отчет как CSV");
-        fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("CSV Files", "*.csv"),
-                new FileChooser.ExtensionFilter("All Files", "*.*")
-        );
-
-        LocalDate startDate = reportStartDate.getValue();
-        LocalDate endDate = reportEndDate.getValue();
-        String defaultFileName = String.format("Отчет_АЗС_%d_%s_%s.csv",
-                azsId,
-                startDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")),
-                endDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
-        );
-        fileChooser.setInitialFileName(defaultFileName);
-
-        File file = fileChooser.showSaveDialog(null);
-        if (file != null) {
-            try {
-                CsvExporter.exportReport(currentReportData, file, startDate, endDate, UserSession.getAzsName());
-                showInfo("Успех", "Отчет успешно экспортирован в CSV.\n" +
-                        "Файл: " + file.getAbsolutePath() + "\n\n" +
-                        "Для открытия в Excel:\n" +
-                        "1. Откройте Excel\n" +
-                        "2. Выберите 'Данные' → 'Из текста/CSV'\n" +
-                        "3. Выберите файл\n" +
-                        "4. Установите кодировку UTF-8\n" +
-                        "5. Разделитель - точка с запятой");
+                        "Откройте файл в Microsoft Excel или другом табличном редакторе.");
             } catch (Exception e) {
                 showError("Ошибка экспорта", "Не удалось экспортировать отчет: " + e.getMessage());
                 e.printStackTrace();
@@ -323,9 +274,9 @@ public class ReportsController {
                 showInfo("Успех", "Отчет успешно экспортирован в HTML.\n" +
                         "Файл: " + file.getAbsolutePath() + "\n\n" +
                         "Вы можете:\n" +
-                        "1. Открыть файл в браузере\n" +
-                        "2. Распечатать из браузера (Ctrl+P)\n" +
-                        "3. Сохранить как PDF из браузера");
+                        "1. Открыть файл в браузере (двойной клик)\n" +
+                        "2. Нажать кнопку 'Печать' в правом верхнем углу\n" +
+                        "3. Сохранить как PDF из диалога печати браузера");
             } catch (Exception e) {
                 showError("Ошибка экспорта", "Не удалось экспортировать отчет: " + e.getMessage());
                 e.printStackTrace();

@@ -81,7 +81,7 @@ public class ExcelExporter {
             writer.write("   <Row>\n");
             writer.write("    <Cell><Data ss:Type=\"String\">Дата формирования:</Data></Cell>\n");
             writer.write("    <Cell><Data ss:Type=\"String\">" +
-                    LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")) + "</Data></Cell>\n");
+                    java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")) + "</Data></Cell>\n");
             writer.write("   </Row>\n");
 
             writer.write("   <Row>\n");

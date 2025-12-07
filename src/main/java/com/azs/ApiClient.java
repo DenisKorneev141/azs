@@ -155,6 +155,76 @@ public class ApiClient {
         });
     }
 
+    /**
+     * Создать новую транзакцию
+     */
+    /**
+     * Создать новую транзакцию
+     */
+    public static CompletableFuture<JsonObject> createTransaction(JsonObject transaction) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                URL url = new URL(serverUrl + "/api/transactions");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setRequestProperty("Accept", "application/json");
+                conn.setDoOutput(true);
+                conn.setConnectTimeout(10000);
+                conn.setReadTimeout(10000);
+
+                try (OutputStream os = conn.getOutputStream()) {
+                    byte[] input = gson.toJson(transaction).getBytes("utf-8");
+                    os.write(input, 0, input.length);
+                }
+
+                int responseCode = conn.getResponseCode();
+                System.out.println("📤 Ответ сервера при создании транзакции: " + responseCode);
+
+                if (responseCode == 201 || responseCode == 200) {
+                    try (BufferedReader br = new BufferedReader(
+                            new InputStreamReader(conn.getInputStream(), "utf-8"))) {
+
+                        StringBuilder response = new StringBuilder();
+                        String responseLine;
+                        while ((responseLine = br.readLine()) != null) {
+                            response.append(responseLine.trim());
+                        }
+
+                        JsonObject jsonResponse = gson.fromJson(response.toString(), JsonObject.class);
+                        jsonResponse.addProperty("success", true);
+                        return jsonResponse;
+                    }
+                } else {
+                    // Читаем ошибку
+                    try (BufferedReader br = new BufferedReader(
+                            new InputStreamReader(conn.getErrorStream(), "utf-8"))) {
+
+                        StringBuilder errorResponse = new StringBuilder();
+                        String errorLine;
+                        while ((errorLine = br.readLine()) != null) {
+                            errorResponse.append(errorLine.trim());
+                        }
+
+                        System.err.println("❌ Ошибка сервера: " + errorResponse.toString());
+                    }
+
+                    JsonObject error = new JsonObject();
+                    error.addProperty("success", false);
+                    error.addProperty("message", "Ошибка сервера: " + responseCode);
+                    return error;
+                }
+            } catch (Exception e) {
+                System.err.println("❌ Ошибка подключения при создании транзакции: " + e.getMessage());
+                e.printStackTrace();
+                JsonObject error = new JsonObject();
+                error.addProperty("success", false);
+                error.addProperty("message", "Ошибка подключения: " + e.getMessage());
+                return error;
+            }
+        });
+    }
+
     private static CompletableFuture<JsonObject> makeGetRequest(String endpoint) {
         return CompletableFuture.supplyAsync(() -> {
             try {

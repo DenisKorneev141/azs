@@ -9,8 +9,13 @@ import com.google.gson.JsonObject;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.stage.Stage;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -339,8 +344,23 @@ public class SalesController {
 
     private void createNewSale() {
         System.out.println("➕ Новая продажа");
-        showAlert("Новая продажа", "Функционал новой продажи будет реализован",
-                Alert.AlertType.INFORMATION);
+        try {
+            Stage currentStage = (Stage) newSaleButton.getScene().getWindow();
+
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/new_transaction.fxml"));
+            Parent root = loader.load();
+
+            Stage mainStage = new Stage();
+            mainStage.setTitle("Новая транзакция");
+            mainStage.setScene(new Scene(root, 1920, 1000));
+            mainStage.show();
+
+            //currentStage.close();
+
+        } catch (Exception e) {
+            showAlert("Ошибка", "Не удалось открыть главное окно: " + e.getMessage(), Alert.AlertType.ERROR);
+            e.printStackTrace();
+        }
     }
 
     private void printReceipt() {

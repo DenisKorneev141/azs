@@ -22,7 +22,6 @@ public class ServerManager {
     public static void startServer() {
         if (isRunning.get()) {
             System.out.println("Ошибка: сервер уже запущен!");
-            server.createContext("/api/azs/", new NozzlesHandler());
             return;
         }
 
@@ -33,18 +32,17 @@ public class ServerManager {
 
             // API эндпоинты
             server.createContext("/api/auth", new AuthHandler());
-
             server.createContext("/api/azs", new AzsHandler());
-
             server.createContext("/api/reports", new ReportsHandler());
-
             server.createContext("/api/fuel", new FuelHandler());
-
             server.createContext("/api/operators", new OperatorsHandler());
-
             server.createContext("/api/users", new UsersHandler());
-
             server.createContext("/api/transactions/recent", new RecentTransactionsHandler());
+
+            // НОВЫЕ ЭНДПОИНТЫ ДЛЯ ТРАНЗАКЦИЙ
+            server.createContext("/api/transactions", new TransactionsHandler());
+            server.createContext("/api/users/search", new UserSearchHandler());
+            server.createContext("/api/users/", new UserBalanceHandler()); // Для обновления баланса
 
             // ВАЖНО: Создать контекст для колонок
             server.createContext("/api/azs/", new NozzlesHandler());
@@ -57,6 +55,10 @@ public class ServerManager {
 
             System.out.println("\n✅ Сервер запущен на порту: " + PORT);
             System.out.println("🌐 Доступ по: http://localhost:" + PORT);
+            System.out.println("\nДоступные эндпоинты:");
+            System.out.println("  POST /api/transactions - создать новую транзакцию");
+            System.out.println("  GET  /api/users/search?phone=... - поиск пользователя по телефону");
+            System.out.println("  POST /api/users/{id}/update-balance - обновить баланс пользователя");
 
             connectToDatabase();
 
@@ -64,8 +66,6 @@ public class ServerManager {
             System.err.println("❌ Ошибка запуска сервера: " + e.getMessage());
             e.printStackTrace();
         }
-
-
     }
 
     // ========== ОБРАБОТЧИК АВТОРИЗАЦИИ ==========
@@ -678,6 +678,277 @@ public class ServerManager {
         }
     }
 
+    // ========== ОБРАБОТЧИК ТРАНЗАКЦИЙ ==========
+    static class TransactionsHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            try {
+                if ("POST".equals(exchange.getRequestMethod())) {
+                    String requestBody = readRequestBody(exchange);
+                    System.out.println("📥 Получена транзакция: " + requestBody);
+
+                    JsonObject transaction = gson.fromJson(requestBody, JsonObject.class);
+
+                    // Сохраняем транзакцию в БД
+                    boolean success = saveTransaction(transaction);
+
+                    JsonObject response = new JsonObject();
+                    if (success) {
+                        response.addProperty("success", true);
+                        response.addProperty("message", "Транзакция успешно сохранена");
+                        System.out.println("✅ Транзакция сохранена успешно");
+                        sendJsonResponse(exchange, 201, response);
+                    } else {
+                        response.addProperty("success", false);
+                        response.addProperty("message", "Ошибка сохранения транзакции");
+                        System.out.println("❌ Ошибка сохранения транзакции");
+                        sendJsonResponse(exchange, 500, response);
+                    }
+                } else {
+                    sendError(exchange, 405, "Метод не поддерживается");
+                }
+            } catch (Exception e) {
+                System.err.println("❌ Ошибка в TransactionsHandler: " + e.getMessage());
+                e.printStackTrace();
+                sendError(exchange, 500, "Ошибка: " + e.getMessage());
+            }
+        }
+
+        private boolean saveTransaction(JsonObject transaction) {
+            String sql = "INSERT INTO transactions (" +
+                    "fuel_id, user_id, azs_id, nozzle, fuel_type, " +
+                    "liters, price_per_liter, total_amount, cash_in, " +
+                    "change, bonus_spent, payment_method, status, created_at" +
+                    ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+            try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
+                pstmt.setInt(1, transaction.get("fuel_id").getAsInt());
+                pstmt.setInt(2, transaction.get("user_id").getAsInt());
+                pstmt.setInt(3, transaction.get("azs_id").getAsInt());
+                pstmt.setInt(4, transaction.get("nozzle").getAsInt());
+                pstmt.setString(5, transaction.get("fuel_type").getAsString());
+                pstmt.setDouble(6, transaction.get("liters").getAsDouble());
+                pstmt.setDouble(7, transaction.get("price_per_liter").getAsDouble());
+                pstmt.setDouble(8, transaction.get("total_amount").getAsDouble());
+                pstmt.setDouble(9, transaction.get("cash_in").getAsDouble());
+                pstmt.setDouble(10, transaction.get("change").getAsDouble());
+                pstmt.setDouble(11, transaction.get("bonus_spent").getAsDouble());
+                pstmt.setString(12, transaction.get("payment_method").getAsString());
+                pstmt.setString(13, transaction.get("status").getAsString());
+
+                // Преобразуем строку даты в Timestamp
+                String createdAtStr = transaction.get("created_at").getAsString();
+                java.time.LocalDateTime localDateTime = java.time.LocalDateTime.parse(createdAtStr);
+                pstmt.setTimestamp(14, java.sql.Timestamp.valueOf(localDateTime));
+
+                int rowsAffected = pstmt.executeUpdate();
+
+                if (rowsAffected > 0) {
+                    // Обновляем статистику пользователя если это не гость
+                    int userId = transaction.get("user_id").getAsInt();
+                    if (userId > 0) {
+                        updateUserStats(userId, transaction);
+                    }
+
+                    System.out.println("✅ Транзакция сохранена в БД: " +
+                            transaction.get("fuel_type").getAsString() + " - " +
+                            transaction.get("liters").getAsDouble() + " л - " +
+                            transaction.get("total_amount").getAsDouble() + " BYN");
+                    return true;
+                }
+            } catch (SQLException e) {
+                System.err.println("❌ Ошибка SQL при сохранении транзакции: " + e.getMessage());
+                System.err.println("SQL запрос: " + sql);
+                e.printStackTrace();
+            } catch (Exception e) {
+                System.err.println("❌ Общая ошибка при сохранении транзакции: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+            return false;
+        }
+
+        private void updateUserStats(int userId, JsonObject transaction) {
+            String updateSql = "UPDATE users SET " +
+                    "balance = balance - ? + (total_amount * 0.01), " + // Списание бонусов + начисление 1%
+                    "total_spent = total_spent + ?, " +
+                    "total_liters = total_liters + ? " +
+                    "WHERE id = ?";
+
+            try (PreparedStatement pstmt = getConnection().prepareStatement(updateSql)) {
+                pstmt.setDouble(1, transaction.get("bonus_spent").getAsDouble());
+                pstmt.setDouble(2, transaction.get("total_amount").getAsDouble());
+                pstmt.setDouble(3, transaction.get("liters").getAsDouble());
+                pstmt.setInt(4, userId);
+
+                pstmt.executeUpdate();
+                System.out.println("✅ Статистика пользователя ID " + userId + " обновлена");
+            } catch (SQLException e) {
+                System.err.println("❌ Ошибка обновления статистики пользователя: " + e.getMessage());
+            }
+        }
+    }
+
+    // ========== ОБРАБОТЧИК ПОИСКА ПОЛЬЗОВАТЕЛЯ ПО ТЕЛЕФОНУ ==========
+    static class UserSearchHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            try {
+                String query = exchange.getRequestURI().getQuery();
+                System.out.println("🔍 Поиск пользователя по запросу: " + query);
+
+                if (query == null || !query.contains("phone=")) {
+                    sendError(exchange, 400, "Не указан номер телефона");
+                    return;
+                }
+
+                // Извлекаем номер телефона
+                String phone = "";
+                String[] params = query.split("&");
+                for (String param : params) {
+                    if (param.startsWith("phone=")) {
+                        phone = param.substring(6);
+                        break;
+                    }
+                }
+
+                if (phone.isEmpty()) {
+                    sendError(exchange, 400, "Не указан номер телефона");
+                    return;
+                }
+
+                // Ищем пользователя в БД
+                JsonObject user = findUserByPhone(phone);
+
+                JsonObject response = new JsonObject();
+                if (user != null) {
+                    response.addProperty("success", true);
+                    response.add("user", user);
+                    System.out.println("✅ Пользователь найден: " + user.get("name").getAsString());
+                } else {
+                    response.addProperty("success", false);
+                    response.addProperty("message", "Пользователь не найден");
+                    System.out.println("❌ Пользователь не найден по телефону: " + phone);
+                }
+
+                sendJsonResponse(exchange, 200, response);
+
+            } catch (Exception e) {
+                System.err.println("❌ Ошибка в UserSearchHandler: " + e.getMessage());
+                e.printStackTrace();
+                sendError(exchange, 500, "Ошибка: " + e.getMessage());
+            }
+        }
+
+        private JsonObject findUserByPhone(String phone) {
+            String sql = "SELECT id, username, phone, name, balance, " +
+                    "total_spent, total_liters " +
+                    "FROM users WHERE phone = ?";
+
+            try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
+                pstmt.setString(1, phone);
+                ResultSet rs = pstmt.executeQuery();
+
+                if (rs.next()) {
+                    JsonObject user = new JsonObject();
+                    user.addProperty("id", rs.getInt("id"));
+                    user.addProperty("username", rs.getString("username"));
+                    user.addProperty("phone", rs.getString("phone"));
+                    user.addProperty("name", rs.getString("name"));
+                    user.addProperty("balance", rs.getDouble("balance"));
+                    user.addProperty("total_spent", rs.getDouble("total_spent"));
+                    user.addProperty("total_liters", rs.getDouble("total_liters"));
+                    return user;
+                }
+            } catch (SQLException e) {
+                System.err.println("❌ Ошибка поиска пользователя: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+            return null;
+        }
+    }
+
+    // ========== ОБРАБОТЧИК ОБНОВЛЕНИЯ БАЛАНСА ПОЛЬЗОВАТЕЛЯ ==========
+    static class UserBalanceHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            try {
+                // Извлекаем ID пользователя из URL
+                String path = exchange.getRequestURI().getPath();
+                System.out.println("🔄 Обновление баланса по пути: " + path);
+
+                String[] parts = path.split("/");
+                if (parts.length < 5) {
+                    sendError(exchange, 400, "Неверный URL");
+                    return;
+                }
+
+                int userId = Integer.parseInt(parts[3]); // /api/users/{id}/update-balance
+
+                if ("POST".equals(exchange.getRequestMethod())) {
+                    String requestBody = readRequestBody(exchange);
+                    JsonObject updateData = gson.fromJson(requestBody, JsonObject.class);
+
+                    // Обновляем баланс пользователя
+                    boolean success = updateUserBalance(userId, updateData);
+
+                    JsonObject response = new JsonObject();
+                    if (success) {
+                        response.addProperty("success", true);
+                        response.addProperty("message", "Баланс обновлен");
+                        System.out.println("✅ Баланс пользователя ID " + userId + " обновлен");
+                    } else {
+                        response.addProperty("success", false);
+                        response.addProperty("message", "Ошибка обновления баланса");
+                        System.out.println("❌ Ошибка обновления баланса пользователя ID " + userId);
+                    }
+
+                    sendJsonResponse(exchange, 200, response);
+                } else {
+                    sendError(exchange, 405, "Метод не поддерживается");
+                }
+            } catch (NumberFormatException e) {
+                sendError(exchange, 400, "Неверный ID пользователя");
+            } catch (Exception e) {
+                System.err.println("❌ Ошибка в UserBalanceHandler: " + e.getMessage());
+                e.printStackTrace();
+                sendError(exchange, 500, "Ошибка: " + e.getMessage());
+            }
+        }
+
+        private boolean updateUserBalance(int userId, JsonObject updateData) {
+            String sql = "UPDATE users SET " +
+                    "balance = balance - ? + ?, " + // bonus_spent + bonus_earned
+                    "total_spent = total_spent + ?, " +
+                    "total_liters = total_liters + ? " +
+                    "WHERE id = ?";
+
+            try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
+                pstmt.setDouble(1, updateData.get("bonus_spent").getAsDouble());
+                pstmt.setDouble(2, updateData.get("bonus_earned").getAsDouble());
+                pstmt.setDouble(3, updateData.get("total_spent_increment").getAsDouble());
+                pstmt.setDouble(4, updateData.get("total_liters_increment").getAsDouble());
+                pstmt.setInt(5, userId);
+
+                int rowsAffected = pstmt.executeUpdate();
+
+                if (rowsAffected > 0) {
+                    System.out.println("✅ Баланс пользователя ID " + userId + " обновлен:");
+                    System.out.println("   Списано бонусов: " + updateData.get("bonus_spent").getAsDouble());
+                    System.out.println("   Начислено бонусов: " + updateData.get("bonus_earned").getAsDouble());
+                    System.out.println("   Добавлено к потраченному: " + updateData.get("total_spent_increment").getAsDouble());
+                    System.out.println("   Добавлено литров: " + updateData.get("total_liters_increment").getAsDouble());
+                    return true;
+                }
+            } catch (SQLException e) {
+                System.err.println("❌ Ошибка обновления баланса пользователя: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+            return false;
+        }
+    }
 
     // ========== ОБРАБОТЧИК ТОПЛИВА ==========
     static class FuelHandler implements HttpHandler {

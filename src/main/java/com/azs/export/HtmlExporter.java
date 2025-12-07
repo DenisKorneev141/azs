@@ -39,7 +39,9 @@ public class HtmlExporter {
             // Заголовок
             writer.write("    <div class='header'>\n");
             writer.write("        <div class='title'>ОТЧЕТ ПО ПРОДАЖАМ ТОПЛИВА</div>\n");
+
             writer.write("    </div>\n");
+
 
             // Информация
             writer.write("    <div class='info'>\n");
@@ -48,7 +50,7 @@ public class HtmlExporter {
                     startDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) + " - " +
                     endDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) + "</div>\n");
             writer.write("        <div><strong>Дата формирования:</strong> " +
-                    java.time.LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")) + "</div>\n");
+                    java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")) + "</div>\n");
             writer.write("    </div>\n");
 
             // Основная статистика
@@ -122,48 +124,10 @@ public class HtmlExporter {
             writer.write("        </table>\n");
             writer.write("    </div>\n");
 
-            // Статистика по топливу (если есть)
-            if (reportData.has("fuel_statistics")) {
-                writer.write("    <div class='section'>\n");
-                writer.write("        <div class='section-title'>Статистика по типам топлива</div>\n");
-                writer.write("        <table>\n");
-                writer.write("            <tr>\n");
-                writer.write("                <th>Тип топлива</th>\n");
-                writer.write("                <th>Кол-во продаж</th>\n");
-                writer.write("                <th>Литров</th>\n");
-                writer.write("                <th>Выручка</th>\n");
-                writer.write("            </tr>\n");
-
-                JsonObject fuelStats = reportData.getAsJsonObject("fuel_statistics");
-
-                if (fuelStats.has("ai92_count") && fuelStats.get("ai92_count").getAsInt() > 0) {
-                    writer.write("            <tr>\n");
-                    writer.write("                <td>АИ-92</td>\n");
-                    writer.write("                <td>" + fuelStats.get("ai92_count").getAsInt() + "</td>\n");
-                    writer.write("                <td>" + String.format("%.1f", fuelStats.get("ai92_liters").getAsDouble()) + " л</td>\n");
-                    writer.write("                <td class='currency'>" + String.format("%.2f", fuelStats.get("ai92_revenue").getAsDouble()) + " BYN</td>\n");
-                    writer.write("            </tr>\n");
-                }
-
-                if (fuelStats.has("ai95_count") && fuelStats.get("ai95_count").getAsInt() > 0) {
-                    writer.write("            <tr>\n");
-                    writer.write("                <td>АИ-95</td>\n");
-                    writer.write("                <td>" + fuelStats.get("ai95_count").getAsInt() + "</td>\n");
-                    writer.write("                <td>" + String.format("%.1f", fuelStats.get("ai95_liters").getAsDouble()) + " л</td>\n");
-                    writer.write("                <td class='currency'>" + String.format("%.2f", fuelStats.get("ai95_revenue").getAsDouble()) + " BYN</td>\n");
-                    writer.write("            </tr>\n");
-                }
-
-                // Аналогично для других типов топлива...
-
-                writer.write("        </table>\n");
-                writer.write("    </div>\n");
-            }
-
             // Подпись
             writer.write("    <div class='footer'>\n");
+            writer.write("        <button class='print-btn' onclick='window.print()'>🖨️ Печать</button>\n");
             writer.write("        <div>Сгенерировано автоматически</div>\n");
-            writer.write("        <div>Отчет действителен без печати и подписи</div>\n");
             writer.write("    </div>\n");
 
             writer.write("</body>\n");
