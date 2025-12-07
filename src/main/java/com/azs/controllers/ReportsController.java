@@ -6,13 +6,16 @@ import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
+import javafx.stage.FileChooser;
 import com.azs.ApiClient;
 import com.azs.model.UserSession;
+import com.azs.export.ExcelExporter;
+import com.azs.export.CsvExporter;
+import com.azs.export.HtmlExporter;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonArray;
+import java.io.File;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.TemporalAdjusters;
 import java.util.concurrent.CompletableFuture;
 
 public class ReportsController {
@@ -26,8 +29,8 @@ public class ReportsController {
     @FXML private Button yearlyReportButton;
 
     @FXML private Button exportExcelButton;
-    @FXML private Button exportPdfButton;
-    @FXML private Button printReportButton;
+    @FXML private Button exportCsvButton;
+    @FXML private Button exportHtmlButton;
 
     @FXML private Label totalRevenueLabel;
     @FXML private Label totalLitersLabel;
@@ -39,6 +42,7 @@ public class ReportsController {
     @FXML private Label mostPopularFuelLabel;
 
     private int azsId;
+    private JsonObject currentReportData;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     @FXML
@@ -66,8 +70,8 @@ public class ReportsController {
         yearlyReportButton.setOnAction(e -> generateYearlyReport());
 
         exportExcelButton.setOnAction(e -> exportToExcel());
-        exportPdfButton.setOnAction(e -> exportToPdf());
-        printReportButton.setOnAction(e -> printReport());
+        exportCsvButton.setOnAction(e -> exportToCsv());
+        exportHtmlButton.setOnAction(e -> exportToHtml());
     }
 
     private void generateReport() {
@@ -129,7 +133,10 @@ public class ReportsController {
 
         future.thenAccept(response -> {
             javafx.application.Platform.runLater(() -> {
+                System.out.println("Получен ответ от сервера: " + response);
+
                 if (response.has("success") && response.get("success").getAsBoolean()) {
+                    currentReportData = response;
                     updateReportUI(response);
                 } else {
                     String errorMsg = response.has("message") ?
@@ -140,6 +147,8 @@ public class ReportsController {
             });
         }).exceptionally(e -> {
             javafx.application.Platform.runLater(() -> {
+                System.err.println("Исключение при загрузке отчета: " + e.getMessage());
+                e.printStackTrace();
                 showError("Ошибка", "Не удалось загрузить данные: " + e.getMessage());
                 setDefaultValues();
             });
@@ -148,6 +157,7 @@ public class ReportsController {
     }
 
     private void updateReportUI(JsonObject reportData) {
+
         try {
             // Основная статистика
             double totalRevenue = reportData.get("total_revenue").getAsDouble();
@@ -161,59 +171,166 @@ public class ReportsController {
             // Детализированная статистика
             if (reportData.has("cash_revenue")) {
                 double cashRevenue = reportData.get("cash_revenue").getAsDouble();
-                cashRevenueLabel.setText(String.format("Наличные: %.2f BYN", cashRevenue));
+                cashRevenueLabel.setText(String.format("💵 Наличные: %.2f BYN", cashRevenue));
             }
 
             if (reportData.has("card_revenue")) {
                 double cardRevenue = reportData.get("card_revenue").getAsDouble();
-                cardRevenueLabel.setText(String.format("Безнал: %.2f BYN", cardRevenue));
+                cardRevenueLabel.setText(String.format("💳 Безналичные: %.2f BYN", cardRevenue));
             }
 
             if (reportData.has("average_sale")) {
                 double averageSale = reportData.get("average_sale").getAsDouble();
-                averageSaleLabel.setText(String.format("Ср. чек: %.2f BYN", averageSale));
+                averageSaleLabel.setText(String.format("🧾 Средний чек: %.2f BYN", averageSale));
             }
 
             if (reportData.has("most_popular_fuel")) {
                 String popularFuel = reportData.get("most_popular_fuel").getAsString();
-                mostPopularFuelLabel.setText("Популярное: " + popularFuel);
+                mostPopularFuelLabel.setText("🏆 Популярное: " + popularFuel);
             }
 
-            System.out.println("Отчет обновлен:");
+            System.out.println("✅ Отчет обновлен:");
             System.out.println("  Выручка: " + totalRevenue + " BYN");
             System.out.println("  Литров: " + totalLiters + " л");
             System.out.println("  Транзакций: " + totalTransactions);
 
         } catch (Exception e) {
-            System.err.println("Ошибка парсинга данных отчета: " + e.getMessage());
+            System.err.println("❌ Ошибка парсинга данных отчета: " + e.getMessage());
+            e.printStackTrace();
             setDefaultValues();
         }
     }
 
     private void setDefaultValues() {
-        totalRevenueLabel.setText("0 BYN");
-        totalLitersLabel.setText("0 л");
+        totalRevenueLabel.setText("0.00 BYN");
+        totalLitersLabel.setText("0.00 л");
         totalSalesCountLabel.setText("0");
 
-        if (cashRevenueLabel != null) cashRevenueLabel.setText("Наличные: 0 BYN");
-        if (cardRevenueLabel != null) cardRevenueLabel.setText("Безнал: 0 BYN");
-        if (averageSaleLabel != null) averageSaleLabel.setText("Ср. чек: 0 BYN");
-        if (mostPopularFuelLabel != null) mostPopularFuelLabel.setText("Популярное: —");
+        if (cashRevenueLabel != null) cashRevenueLabel.setText("💵 Наличные: 0.00 BYN");
+        if (cardRevenueLabel != null) cardRevenueLabel.setText("💳 Безналичные: 0.00 BYN");
+        if (averageSaleLabel != null) averageSaleLabel.setText("🧾 Средний чек: 0.00 BYN");
+        if (mostPopularFuelLabel != null) mostPopularFuelLabel.setText("🏆 Популярное: —");
     }
 
     private void exportToExcel() {
-        showInfo("Экспорт в Excel", "Функция экспорта в Excel будет реализована в следующем обновлении");
-        // TODO: Реализовать экспорт в Excel
+        if (currentReportData == null) {
+            showError("Ошибка", "Сначала сформируйте отчет");
+            return;
+        }
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Сохранить отчет как Excel (XML)");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Excel XML Files", "*.xml"),
+                new FileChooser.ExtensionFilter("All Files", "*.*")
+        );
+
+        // Генерируем имя файла по умолчанию
+        LocalDate startDate = reportStartDate.getValue();
+        LocalDate endDate = reportEndDate.getValue();
+        String defaultFileName = String.format("Отчет_АЗС_%d_%s_%s.xml",
+                azsId,
+                startDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")),
+                endDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+        );
+        fileChooser.setInitialFileName(defaultFileName);
+
+        File file = fileChooser.showSaveDialog(null);
+        if (file != null) {
+            try {
+                ExcelExporter.exportReport(currentReportData, file, startDate, endDate, UserSession.getAzsName());
+                showInfo("Успех", "Отчет успешно экспортирован в Excel XML формат.\n" +
+                        "Файл: " + file.getAbsolutePath() + "\n\n" +
+                        "Для открытия в Excel:\n" +
+                        "1. Откройте Excel\n" +
+                        "2. Файл → Открыть\n" +
+                        "3. Выберите этот XML файл\n" +
+                        "4. Сохраните как .xlsx если нужно");
+            } catch (Exception e) {
+                showError("Ошибка экспорта", "Не удалось экспортировать отчет: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
     }
 
-    private void exportToPdf() {
-        showInfo("Экспорт в PDF", "Функция экспорта в PDF будет реализована в следующем обновлении");
-        // TODO: Реализовать экспорт в PDF
+    private void exportToCsv() {
+        if (currentReportData == null) {
+            showError("Ошибка", "Сначала сформируйте отчет");
+            return;
+        }
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Сохранить отчет как CSV");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("CSV Files", "*.csv"),
+                new FileChooser.ExtensionFilter("All Files", "*.*")
+        );
+
+        LocalDate startDate = reportStartDate.getValue();
+        LocalDate endDate = reportEndDate.getValue();
+        String defaultFileName = String.format("Отчет_АЗС_%d_%s_%s.csv",
+                azsId,
+                startDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")),
+                endDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+        );
+        fileChooser.setInitialFileName(defaultFileName);
+
+        File file = fileChooser.showSaveDialog(null);
+        if (file != null) {
+            try {
+                CsvExporter.exportReport(currentReportData, file, startDate, endDate, UserSession.getAzsName());
+                showInfo("Успех", "Отчет успешно экспортирован в CSV.\n" +
+                        "Файл: " + file.getAbsolutePath() + "\n\n" +
+                        "Для открытия в Excel:\n" +
+                        "1. Откройте Excel\n" +
+                        "2. Выберите 'Данные' → 'Из текста/CSV'\n" +
+                        "3. Выберите файл\n" +
+                        "4. Установите кодировку UTF-8\n" +
+                        "5. Разделитель - точка с запятой");
+            } catch (Exception e) {
+                showError("Ошибка экспорта", "Не удалось экспортировать отчет: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
     }
 
-    private void printReport() {
-        showInfo("Печать отчета", "Функция печати отчета будет реализована в следующем обновлении");
-        // TODO: Реализовать печать отчета
+    private void exportToHtml() {
+        if (currentReportData == null) {
+            showError("Ошибка", "Сначала сформируйте отчет");
+            return;
+        }
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Сохранить отчет как HTML");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("HTML Files", "*.html"),
+                new FileChooser.ExtensionFilter("All Files", "*.*")
+        );
+
+        LocalDate startDate = reportStartDate.getValue();
+        LocalDate endDate = reportEndDate.getValue();
+        String defaultFileName = String.format("Отчет_АЗС_%d_%s_%s.html",
+                azsId,
+                startDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")),
+                endDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+        );
+        fileChooser.setInitialFileName(defaultFileName);
+
+        File file = fileChooser.showSaveDialog(null);
+        if (file != null) {
+            try {
+                HtmlExporter.exportReport(currentReportData, file, startDate, endDate, UserSession.getAzsName());
+                showInfo("Успех", "Отчет успешно экспортирован в HTML.\n" +
+                        "Файл: " + file.getAbsolutePath() + "\n\n" +
+                        "Вы можете:\n" +
+                        "1. Открыть файл в браузере\n" +
+                        "2. Распечатать из браузера (Ctrl+P)\n" +
+                        "3. Сохранить как PDF из браузера");
+            } catch (Exception e) {
+                showError("Ошибка экспорта", "Не удалось экспортировать отчет: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
     }
 
     private void showError(String title, String message) {
