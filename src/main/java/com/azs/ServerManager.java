@@ -7,6 +7,8 @@ import com.google.gson.*;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.sql.*;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.mindrot.jbcrypt.BCrypt;
 
@@ -20,29 +22,47 @@ public class ServerManager {
     public static void startServer() {
         if (isRunning.get()) {
             System.out.println("Ошибка: сервер уже запущен!");
+            server.createContext("/api/azs/", new NozzlesHandler());
             return;
         }
 
         try {
             server = HttpServer.create(new InetSocketAddress("0.0.0.0", PORT), 0);
 
+            System.out.println("Создание контекстов API...");
+
             // API эндпоинты
             server.createContext("/api/auth", new AuthHandler());
+
             server.createContext("/api/azs", new AzsHandler());
+
+            server.createContext("/api/reports", new ReportsHandler());
+
             server.createContext("/api/fuel", new FuelHandler());
+
             server.createContext("/api/operators", new OperatorsHandler());
+
             server.createContext("/api/users", new UsersHandler());
+
+            server.createContext("/api/transactions/recent", new RecentTransactionsHandler());
+
+            // ВАЖНО: Создать контекст для колонок
+            server.createContext("/api/azs/", new NozzlesHandler());
+
+            server.createContext("/api/health", new HealthHandler());
 
             server.setExecutor(null);
             server.start();
             isRunning.set(true);
 
-            System.out.println("✅ Сервер запущен на порту: " + PORT);
+            System.out.println("\n✅ Сервер запущен на порту: " + PORT);
             System.out.println("🌐 Доступ по: http://localhost:" + PORT);
+
             connectToDatabase();
-            server.createContext("/api/transactions/recent", new RecentTransactionsHandler());
+
         } catch (IOException e) {
             System.err.println("❌ Ошибка запуска сервера: " + e.getMessage());
+            e.printStackTrace();
         }
 
 
@@ -384,6 +404,16 @@ public class ServerManager {
         }
     }
 
+    static class HealthHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            JsonObject response = new JsonObject();
+            response.addProperty("status", "OK");
+            response.addProperty("timestamp", System.currentTimeMillis());
+            sendJsonResponse(exchange, 200, response);
+        }
+    }
+
 
 
     // ========== ОБРАБОТЧИК АЗС ==========
@@ -436,34 +466,487 @@ public class ServerManager {
         }
     }
 
+
+
+    // Добавьте класс обработчика отчетов:
+    static class ReportsHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            try {
+                String query = exchange.getRequestURI().getQuery();
+                System.out.println("Запрос отчета: " + query);
+
+                if (query == null) {
+                    sendError(exchange, 400, "Не указаны параметры запроса");
+                    return;
+                }
+
+                // Парсим параметры
+                Map<String, String> params = parseQuery(query);
+
+                if (!params.containsKey("azs_id") || !params.containsKey("start_date") || !params.containsKey("end_date")) {
+                    sendError(exchange, 400, "Необходимы параметры: azs_id, start_date, end_date");
+                    return;
+                }
+
+                int azsId = Integer.parseInt(params.get("azs_id"));
+                String startDate = params.get("start_date");
+                String endDate = params.get("end_date");
+
+                System.out.println("Формирование отчета для АЗС " + azsId +
+                        " с " + startDate + " по " + endDate);
+
+                JsonObject reportData = generateReport(azsId, startDate, endDate);
+                sendJsonResponse(exchange, 200, reportData);
+
+            } catch (Exception e) {
+                System.err.println("Ошибка формирования отчета: " + e.getMessage());
+                e.printStackTrace();
+                sendError(exchange, 500, "Ошибка сервера: " + e.getMessage());
+            }
+        }
+
+        private Map<String, String> parseQuery(String query) {
+            Map<String, String> params = new HashMap<>();
+            if (query == null) return params;
+
+            String[] pairs = query.split("&");
+            for (String pair : pairs) {
+                String[] keyValue = pair.split("=");
+                if (keyValue.length == 2) {
+                    params.put(keyValue[0], keyValue[1]);
+                }
+            }
+            return params;
+        }
+
+        private JsonObject generateReport(int azsId, String startDate, String endDate) throws SQLException {
+            JsonObject report = new JsonObject();
+
+            System.out.println("📊 Генерация отчета для АЗС ID: " + azsId);
+            System.out.println("📊 Период: " + startDate + " - " + endDate);
+
+            // Исправленный SQL запрос с правильными значениями полей
+            String sql = "SELECT " +
+                    "COUNT(*) as total_transactions, " +
+                    "COALESCE(SUM(total_amount), 0) as total_revenue, " +
+                    "COALESCE(SUM(liters), 0) as total_liters, " +
+                    "COALESCE(SUM(CASE WHEN payment_method = 'Наличные' THEN total_amount ELSE 0 END), 0) as cash_revenue, " +
+                    "COALESCE(SUM(CASE WHEN payment_method = 'Банковская карта' THEN total_amount ELSE 0 END), 0) as card_revenue, " +
+                    "COALESCE(AVG(total_amount), 0) as average_sale " +
+                    "FROM transactions " +
+                    "WHERE azs_id = ? " +
+                    "AND created_at::date >= ?::date " +
+                    "AND created_at::date <= ?::date " +
+                    "AND status = 'Успешно'";  // Только успешные транзакции
+
+            try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
+                pstmt.setInt(1, azsId);
+                pstmt.setString(2, startDate);
+                pstmt.setString(3, endDate);
+
+                System.out.println("📊 SQL запрос: " + sql);
+                System.out.println("📊 Параметры: azs_id=" + azsId + ", start_date=" + startDate + ", end_date=" + endDate);
+
+                ResultSet rs = pstmt.executeQuery();
+
+                if (rs.next()) {
+                    int totalTransactions = rs.getInt("total_transactions");
+                    double totalRevenue = rs.getDouble("total_revenue");
+                    double totalLiters = rs.getDouble("total_liters");
+                    double cashRevenue = rs.getDouble("cash_revenue");
+                    double cardRevenue = rs.getDouble("card_revenue");
+                    double averageSale = rs.getDouble("average_sale");
+
+                    report.addProperty("total_transactions", totalTransactions);
+                    report.addProperty("total_revenue", totalRevenue);
+                    report.addProperty("total_liters", totalLiters);
+                    report.addProperty("cash_revenue", cashRevenue);
+                    report.addProperty("card_revenue", cardRevenue);
+                    report.addProperty("average_sale", averageSale);
+                    report.addProperty("success", true);
+
+                    System.out.println("📊 Отчет сформирован:");
+                    System.out.println("  Транзакций: " + totalTransactions);
+                    System.out.println("  Выручка: " + totalRevenue + " BYN");
+                    System.out.println("  Литров: " + totalLiters + " л");
+                    System.out.println("  Наличные: " + cashRevenue + " BYN");
+                    System.out.println("  Карта: " + cardRevenue + " BYN");
+                    System.out.println("  Средний чек: " + averageSale + " BYN");
+                } else {
+                    // Если нет данных
+                    report.addProperty("total_transactions", 0);
+                    report.addProperty("total_revenue", 0.0);
+                    report.addProperty("total_liters", 0.0);
+                    report.addProperty("cash_revenue", 0.0);
+                    report.addProperty("card_revenue", 0.0);
+                    report.addProperty("average_sale", 0.0);
+                    report.addProperty("success", true);
+                    System.out.println("📊 Нет данных за указанный период");
+                }
+            }
+
+            // Самый популярный тип топлива
+            String popularFuelSql = "SELECT fuel_type, COUNT(*) as count " +
+                    "FROM transactions " +
+                    "WHERE azs_id = ? " +
+                    "AND created_at::date >= ?::date " +
+                    "AND created_at::date <= ?::date " +
+                    "AND status = 'Успешно' " +
+                    "GROUP BY fuel_type " +
+                    "ORDER BY count DESC " +
+                    "LIMIT 1";
+
+            try (PreparedStatement pstmt = getConnection().prepareStatement(popularFuelSql)) {
+                pstmt.setInt(1, azsId);
+                pstmt.setString(2, startDate);
+                pstmt.setString(3, endDate);
+
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    String popularFuel = rs.getString("fuel_type");
+                    report.addProperty("most_popular_fuel", popularFuel);
+                    System.out.println("📊 Популярное топливо: " + popularFuel);
+                } else {
+                    report.addProperty("most_popular_fuel", "Нет данных");
+                    System.out.println("📊 Популярное топливо: нет данных");
+                }
+            }
+
+            // Статистика по типам топлива
+            String fuelStatsSql = "SELECT " +
+                    "COUNT(CASE WHEN fuel_type LIKE '%92%' THEN 1 END) as ai92_count, " +
+                    "COALESCE(SUM(CASE WHEN fuel_type LIKE '%92%' THEN liters ELSE 0 END), 0) as ai92_liters, " +
+                    "COALESCE(SUM(CASE WHEN fuel_type LIKE '%92%' THEN total_amount ELSE 0 END), 0) as ai92_revenue, " +
+                    "COUNT(CASE WHEN fuel_type LIKE '%95%' THEN 1 END) as ai95_count, " +
+                    "COALESCE(SUM(CASE WHEN fuel_type LIKE '%95%' THEN liters ELSE 0 END), 0) as ai95_liters, " +
+                    "COALESCE(SUM(CASE WHEN fuel_type LIKE '%95%' THEN total_amount ELSE 0 END), 0) as ai95_revenue, " +
+                    "COUNT(CASE WHEN fuel_type LIKE '%98%' THEN 1 END) as ai98_count, " +
+                    "COALESCE(SUM(CASE WHEN fuel_type LIKE '%98%' THEN liters ELSE 0 END), 0) as ai98_liters, " +
+                    "COALESCE(SUM(CASE WHEN fuel_type LIKE '%98%' THEN total_amount ELSE 0 END), 0) as ai98_revenue, " +
+                    "COUNT(CASE WHEN fuel_type LIKE '%100%' THEN 1 END) as ai100_count, " +
+                    "COALESCE(SUM(CASE WHEN fuel_type LIKE '%100%' THEN liters ELSE 0 END), 0) as ai100_liters, " +
+                    "COALESCE(SUM(CASE WHEN fuel_type LIKE '%100%' THEN total_amount ELSE 0 END), 0) as ai100_revenue, " +
+                    "COUNT(CASE WHEN fuel_type LIKE '%ДТ%' OR fuel_type LIKE '%Дизель%' THEN 1 END) as dt_count, " +
+                    "COALESCE(SUM(CASE WHEN fuel_type LIKE '%ДТ%' OR fuel_type LIKE '%Дизель%' THEN liters ELSE 0 END), 0) as dt_liters, " +
+                    "COALESCE(SUM(CASE WHEN fuel_type LIKE '%ДТ%' OR fuel_type LIKE '%Дизель%' THEN total_amount ELSE 0 END), 0) as dt_revenue " +
+                    "FROM transactions " +
+                    "WHERE azs_id = ? " +
+                    "AND created_at::date >= ?::date " +
+                    "AND created_at::date <= ?::date " +
+                    "AND status = 'Успешно'";
+
+            try (PreparedStatement pstmt = getConnection().prepareStatement(fuelStatsSql)) {
+                pstmt.setInt(1, azsId);
+                pstmt.setString(2, startDate);
+                pstmt.setString(3, endDate);
+
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    JsonObject fuelStats = new JsonObject();
+
+                    // AI-92
+                    fuelStats.addProperty("ai92_count", rs.getInt("ai92_count"));
+                    fuelStats.addProperty("ai92_liters", rs.getDouble("ai92_liters"));
+                    fuelStats.addProperty("ai92_revenue", rs.getDouble("ai92_revenue"));
+
+                    // AI-95
+                    fuelStats.addProperty("ai95_count", rs.getInt("ai95_count"));
+                    fuelStats.addProperty("ai95_liters", rs.getDouble("ai95_liters"));
+                    fuelStats.addProperty("ai95_revenue", rs.getDouble("ai95_revenue"));
+
+                    // AI-98
+                    fuelStats.addProperty("ai98_count", rs.getInt("ai98_count"));
+                    fuelStats.addProperty("ai98_liters", rs.getDouble("ai98_liters"));
+                    fuelStats.addProperty("ai98_revenue", rs.getDouble("ai98_revenue"));
+
+                    // AI-100
+                    fuelStats.addProperty("ai100_count", rs.getInt("ai100_count"));
+                    fuelStats.addProperty("ai100_liters", rs.getDouble("ai100_liters"));
+                    fuelStats.addProperty("ai100_revenue", rs.getDouble("ai100_revenue"));
+
+                    // Дизель
+                    fuelStats.addProperty("dt_count", rs.getInt("dt_count"));
+                    fuelStats.addProperty("dt_liters", rs.getDouble("dt_liters"));
+                    fuelStats.addProperty("dt_revenue", rs.getDouble("dt_revenue"));
+
+                    report.add("fuel_statistics", fuelStats);
+                }
+            }
+
+            return report;
+        }
+    }
+
+
     // ========== ОБРАБОТЧИК ТОПЛИВА ==========
     static class FuelHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             try {
-                JsonArray fuelList = new JsonArray();
-                String sql = "SELECT id, name, price FROM fuels ORDER BY id";
+                JsonObject response = new JsonObject();
+
+                String sql = "SELECT name, price FROM fuels ORDER BY id";
 
                 try (Statement stmt = getConnection().createStatement();
                      ResultSet rs = stmt.executeQuery(sql)) {
 
+                    JsonObject fuelData = new JsonObject();
+
                     while (rs.next()) {
-                        JsonObject fuel = new JsonObject();
-                        fuel.addProperty("id", rs.getInt("id"));
-                        fuel.addProperty("name", rs.getString("name"));
-                        fuel.addProperty("price", rs.getDouble("price"));
-                        fuelList.add(fuel);
+                        String name = rs.getString("name");
+                        double price = rs.getDouble("price");
+
+                        // Преобразуем имя топлива в нужный формат
+                        String key = convertFuelNameToKey(name);
+                        if (key != null) {
+                            fuelData.addProperty(key, String.format("%.2f", price));
+                            fuelData.addProperty(key + "_raw", price);
+                        }
                     }
+
+                    response.addProperty("success", true);
+                    response.add("data", fuelData);
+                    System.out.println("✅ Цены на топливо загружены из БД");
+
+                } catch (SQLException e) {
+                    response.addProperty("success", false);
+                    response.addProperty("message", "Ошибка БД: " + e.getMessage());
+                    System.err.println("❌ Ошибка загрузки цен на топливо: " + e.getMessage());
                 }
 
-                JsonObject response = new JsonObject();
-                response.addProperty("success", true);
-                response.add("data", fuelList);
                 sendJsonResponse(exchange, 200, response);
 
             } catch (Exception e) {
+                JsonObject error = new JsonObject();
+                error.addProperty("success", false);
+                error.addProperty("message", "Ошибка: " + e.getMessage());
+                sendJsonResponse(exchange, 500, error);
+                e.printStackTrace();
+            }
+        }
+
+        private String convertFuelNameToKey(String name) {
+            if (name == null) return null;
+
+            name = name.toLowerCase().trim();
+
+            // Определяем тип топлива по названию
+            if (name.contains("92") || name.contains("аи-92") || name.contains("аи92")) {
+                return "ai92";
+            } else if (name.contains("95") || name.contains("аи-95") || name.contains("аи95")) {
+                return "ai95";
+            } else if (name.contains("98") || name.contains("аи-98") || name.contains("аи98")) {
+                return "ai98";
+            } else if (name.contains("100") || name.contains("аи-100") || name.contains("аи100")) {
+                return "ai100";
+            } else if (name.contains("дт") || name.contains("дизель") || name.contains("diesel")) {
+                return "dt";
+            } else if (name.contains("дтк-5") || name.contains("дтк5")) {
+                return "dtk5";
+            }
+
+            return null;
+        }
+    }
+
+    static class NozzlesHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            try {
+                String path = exchange.getRequestURI().getPath();
+                System.out.println("🔍 Получен запрос: " + path + " | Метод: " + exchange.getRequestMethod()); // DEBUG
+
+                // Убираем /api/azs/ из начала пути
+                String relativePath = path.replace("/api/azs/", "");
+                System.out.println("🔍 Относительный путь: " + relativePath); // DEBUG
+
+                String[] parts = relativePath.split("/");
+
+                if (parts.length == 1) {
+                    // Это /api/azs/{id}
+                    int azsId = Integer.parseInt(parts[0]);
+                    if (exchange.getRequestMethod().equals("GET")) {
+                        handleGetAzsDetails(exchange, azsId);
+                    } else {
+                        sendError(exchange, 405, "Метод не поддерживается");
+                    }
+                } else if (parts.length >= 2 && parts[1].equals("nozzles")) {
+                    int azsId = Integer.parseInt(parts[0]);
+
+                    if (parts.length == 2) {
+                        // /api/azs/{id}/nozzles
+                        if (exchange.getRequestMethod().equals("GET")) {
+                            handleGetNozzles(exchange, azsId);
+                        } else {
+                            sendError(exchange, 405, "Метод не поддерживается");
+                        }
+                    } else if (parts.length == 3) {
+                        // /api/azs/{id}/nozzles/{nozzleNumber}
+                        int nozzleNumber = Integer.parseInt(parts[2]);
+                        if (exchange.getRequestMethod().equals("PUT")) {
+                            handleUpdateNozzle(exchange, azsId, nozzleNumber);
+                        } else {
+                            sendError(exchange, 405, "Метод не поддерживается");
+                        }
+                    } else {
+                        sendError(exchange, 404, "Неверный URL");
+                    }
+                } else {
+                    sendError(exchange, 404, "Неверный URL");
+                }
+
+            } catch (NumberFormatException e) {
+                sendError(exchange, 400, "Некорректный числовой параметр: " + e.getMessage());
+            } catch (Exception e) {
+                System.err.println("❌ Ошибка в NozzlesHandler: " + e.getMessage());
+                e.printStackTrace();
                 sendError(exchange, 500, "Ошибка: " + e.getMessage());
             }
+        }
+
+        private void handleGetAzsDetails(HttpExchange exchange, int azsId) throws IOException, SQLException {
+            System.out.println("Получение деталей АЗС ID: " + azsId);
+
+            String sql = "SELECT id, name, address, nozzle_count FROM azs WHERE id = ?";
+
+            try (PreparedStatement stmt = getConnection().prepareStatement(sql)) {
+                stmt.setInt(1, azsId);
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    JsonObject response = new JsonObject();
+                    if (rs.next()) {
+                        JsonObject azs = new JsonObject();
+                        azs.addProperty("id", rs.getInt("id"));
+                        azs.addProperty("name", rs.getString("name"));
+                        azs.addProperty("address", rs.getString("address"));
+                        azs.addProperty("nozzle_count", rs.getInt("nozzle_count"));
+
+                        response.addProperty("success", true);
+                        response.add("azs", azs);
+                    } else {
+                        response.addProperty("success", false);
+                        response.addProperty("message", "АЗС не найдена");
+                    }
+
+                    sendJsonResponse(exchange, 200, response);
+                }
+            }
+        }
+
+        private void handleGetNozzles(HttpExchange exchange, int azsId) throws IOException, SQLException {
+            System.out.println("Получение статуса колонок для АЗС ID: " + azsId);
+
+            JsonObject response = new JsonObject();
+
+            String sql = "SELECT nozzle_1, nozzle_2, nozzle_3, nozzle_4, nozzle_count " +
+                    "FROM azs WHERE id = ?";
+
+            try (PreparedStatement stmt = getConnection().prepareStatement(sql)) {
+                stmt.setInt(1, azsId);
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        JsonObject nozzles = new JsonObject();
+                        nozzles.addProperty("nozzle_1", rs.getString("nozzle_1"));
+                        nozzles.addProperty("nozzle_2", rs.getString("nozzle_2"));
+                        nozzles.addProperty("nozzle_3", rs.getString("nozzle_3"));
+                        nozzles.addProperty("nozzle_4", rs.getString("nozzle_4"));
+                        nozzles.addProperty("nozzle_count", rs.getInt("nozzle_count"));
+
+                        response.addProperty("success", true);
+                        response.add("nozzles", nozzles);
+
+                        System.out.println("✅ Отправлены данные колонок для АЗС " + azsId + ":");
+                        System.out.println("   Колонка 1: " + rs.getString("nozzle_1"));
+                        System.out.println("   Колонка 2: " + rs.getString("nozzle_2"));
+                        System.out.println("   Колонка 3: " + rs.getString("nozzle_3"));
+                        System.out.println("   Колонка 4: " + rs.getString("nozzle_4"));
+                        System.out.println("   Всего колонок: " + rs.getInt("nozzle_count"));
+                    } else {
+                        response.addProperty("success", false);
+                        response.addProperty("message", "АЗС не найдена");
+                        System.out.println("❌ АЗС с ID " + azsId + " не найдена");
+                    }
+                }
+            }
+
+            sendJsonResponse(exchange, 200, response);
+        }
+
+        private void handleUpdateNozzle(HttpExchange exchange, int azsId, int nozzleNumber)
+                throws IOException, SQLException {
+
+            System.out.println("Обновление колонки " + nozzleNumber + " для АЗС " + azsId);
+
+            // Читаем тело запроса
+            String body = readRequestBody(exchange);
+            JsonObject request = gson.fromJson(body, JsonObject.class);
+            String newStatus = request.get("status").getAsString();
+
+            // Проверяем допустимые статусы
+            if (!isValidNozzleStatus(newStatus)) {
+                sendError(exchange, 400, "Неверный статус колонки. Допустимые: active, not_active, not_available");
+                return;
+            }
+
+            // Проверяем существует ли колонка
+            String checkSql = "SELECT nozzle_count FROM azs WHERE id = ?";
+            try (PreparedStatement checkStmt = getConnection().prepareStatement(checkSql)) {
+                checkStmt.setInt(1, azsId);
+                ResultSet rs = checkStmt.executeQuery();
+
+                if (rs.next()) {
+                    int nozzleCount = rs.getInt("nozzle_count");
+                    if (nozzleNumber > nozzleCount) {
+                        sendError(exchange, 400, "У АЗС только " + nozzleCount + " колонок");
+                        return;
+                    }
+                } else {
+                    sendError(exchange, 404, "АЗС не найдена");
+                    return;
+                }
+            }
+
+            // Определяем какое поле обновлять
+            String columnName;
+            switch (nozzleNumber) {
+                case 1: columnName = "nozzle_1"; break;
+                case 2: columnName = "nozzle_2"; break;
+                case 3: columnName = "nozzle_3"; break;
+                case 4: columnName = "nozzle_4"; break;
+                default:
+                    sendError(exchange, 400, "Неверный номер колонки. Допустимые: 1-4");
+                    return;
+            }
+
+            String sql = "UPDATE azs SET " + columnName + " = ? WHERE id = ?";
+
+            try (PreparedStatement stmt = getConnection().prepareStatement(sql)) {
+                stmt.setString(1, newStatus);
+                stmt.setInt(2, azsId);
+
+                int rowsAffected = stmt.executeUpdate();
+
+                JsonObject response = new JsonObject();
+                if (rowsAffected > 0) {
+                    response.addProperty("success", true);
+                    response.addProperty("message", "Статус колонки обновлен");
+                    System.out.println("✅ Статус колонки " + nozzleNumber + " обновлен на " + newStatus);
+                } else {
+                    response.addProperty("success", false);
+                    response.addProperty("message", "Не удалось обновить статус");
+                    System.out.println("❌ Не удалось обновить статус колонки");
+                }
+
+                sendJsonResponse(exchange, 200, response);
+            }
+        }
+
+        private boolean isValidNozzleStatus(String status) {
+            return status.equals("active") ||
+                    status.equals("not_active") ||
+                    status.equals("not_available");
         }
     }
 

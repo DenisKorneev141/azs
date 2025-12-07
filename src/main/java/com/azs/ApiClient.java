@@ -110,6 +110,51 @@ public class ApiClient {
         return makeGetRequest("/api/fuel");
     }
 
+    /**
+     * Получить данные для отчета
+     */
+    public static CompletableFuture<JsonObject> getReportData(int azsId, String startDate, String endDate) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                String endpoint = String.format("/api/reports?azs_id=%d&start_date=%s&end_date=%s",
+                        azsId, startDate, endDate);
+                URL url = new URL(serverUrl + endpoint);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("Accept", "application/json");
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
+
+                int responseCode = conn.getResponseCode();
+                if (responseCode == 200) {
+                    try (BufferedReader br = new BufferedReader(
+                            new InputStreamReader(conn.getInputStream(), "utf-8"))) {
+
+                        StringBuilder response = new StringBuilder();
+                        String responseLine;
+                        while ((responseLine = br.readLine()) != null) {
+                            response.append(responseLine.trim());
+                        }
+
+                        JsonObject jsonResponse = gson.fromJson(response.toString(), JsonObject.class);
+                        jsonResponse.addProperty("success", true);
+                        return jsonResponse;
+                    }
+                } else {
+                    JsonObject error = new JsonObject();
+                    error.addProperty("success", false);
+                    error.addProperty("message", "Ошибка: " + responseCode);
+                    return error;
+                }
+            } catch (Exception e) {
+                JsonObject error = new JsonObject();
+                error.addProperty("success", false);
+                error.addProperty("message", "Ошибка подключения: " + e.getMessage());
+                return error;
+            }
+        });
+    }
+
     private static CompletableFuture<JsonObject> makeGetRequest(String endpoint) {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -298,6 +343,97 @@ public class ApiClient {
                 return responseCode == 200;
             } catch (Exception e) {
                 return false;
+            }
+        });
+    }
+
+    public static CompletableFuture<JsonObject> getNozzlesStatus(int azsId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                URL url = new URL(serverUrl + "/api/azs/" + azsId + "/nozzles");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("Accept", "application/json");
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
+
+                int responseCode = conn.getResponseCode();
+                if (responseCode == 200) {
+                    try (BufferedReader br = new BufferedReader(
+                            new InputStreamReader(conn.getInputStream(), "utf-8"))) {
+
+                        StringBuilder response = new StringBuilder();
+                        String responseLine;
+                        while ((responseLine = br.readLine()) != null) {
+                            response.append(responseLine.trim());
+                        }
+
+                        JsonObject json = gson.fromJson(response.toString(), JsonObject.class);
+                        json.addProperty("success", true);
+                        return json;
+                    }
+                } else {
+                    JsonObject error = new JsonObject();
+                    error.addProperty("success", false);
+                    error.addProperty("message", "Ошибка: " + responseCode);
+                    return error;
+                }
+            } catch (Exception e) {
+                JsonObject error = new JsonObject();
+                error.addProperty("success", false);
+                error.addProperty("message", "Ошибка: " + e.getMessage());
+                return error;
+            }
+        });
+    }
+
+    /**
+     * Обновить статус колонки
+     */
+    public static CompletableFuture<JsonObject> updateNozzleStatus(int azsId, int nozzleNumber, String newStatus) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                URL url = new URL(serverUrl + "/api/azs/" + azsId + "/nozzles/" + nozzleNumber);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("PUT");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setRequestProperty("Accept", "application/json");
+                conn.setDoOutput(true);
+
+                JsonObject request = new JsonObject();
+                request.addProperty("status", newStatus);
+
+                try (OutputStream os = conn.getOutputStream()) {
+                    byte[] input = gson.toJson(request).getBytes("utf-8");
+                    os.write(input, 0, input.length);
+                }
+
+                int responseCode = conn.getResponseCode();
+                if (responseCode == 200) {
+                    try (BufferedReader br = new BufferedReader(
+                            new InputStreamReader(conn.getInputStream(), "utf-8"))) {
+
+                        StringBuilder response = new StringBuilder();
+                        String responseLine;
+                        while ((responseLine = br.readLine()) != null) {
+                            response.append(responseLine.trim());
+                        }
+
+                        JsonObject json = gson.fromJson(response.toString(), JsonObject.class);
+                        json.addProperty("success", true);
+                        return json;
+                    }
+                } else {
+                    JsonObject error = new JsonObject();
+                    error.addProperty("success", false);
+                    error.addProperty("message", "Ошибка: " + responseCode);
+                    return error;
+                }
+            } catch (Exception e) {
+                JsonObject error = new JsonObject();
+                error.addProperty("success", false);
+                error.addProperty("message", "Ошибка: " + e.getMessage());
+                return error;
             }
         });
     }

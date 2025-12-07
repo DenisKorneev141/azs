@@ -53,6 +53,6 @@
     <!-- Информация -->
     <VBox alignment="CENTER" spacing="10" style="-fx-padding: 20;">
         <Label style="-fx-font-size: 16px; -fx-text-fill: #7f8c8d;" text="Цены фиксированные и обновляются администратором" />
-        <Label fx:id="lastUpdateLabel" style="-fx-font-size: 14px; -fx-text-fill: #95a5a6;" text="Последнее обновление: --:--" />
+
     </VBox>
 </VBox>

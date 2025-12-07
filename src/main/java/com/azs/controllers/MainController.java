@@ -79,8 +79,6 @@ public class MainController {
         // Обновляем время (сразу)
         updateCurrentTime();
 
-        // TODO: Загрузить сумму в кассе с сервера
-        //cashAmountLabel.setText(loadCashAmount() + " BYN");
     }
 
     private void startClock() {

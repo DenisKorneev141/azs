@@ -172,7 +172,7 @@ public class LoginController {
                                     lastName, azsName, azsId,
                                     todaysTotal, todaysTransactions, todaysLiters); // ← ВСЕ 7 параметров!
 
-                            showAlert("Успех",
+                            /*showAlert("Успех",
                                     message + "\n" +
                                             "Оператор: " + firstName + " " + lastName + "\n" +
                                             "АЗС: " + azsName + "\n" +
@@ -180,7 +180,7 @@ public class LoginController {
                                             "• Сумма: " + String.format("%,.2f ₽", todaysTotal) + "\n" +
                                             "• Транзакций: " + todaysTransactions + "\n" +
                                             "• Литров: " + String.format("%.1f л", todaysLiters),
-                                    AlertType.INFORMATION);
+                                    AlertType.INFORMATION);*/
 
                             openMainWindow();
 
