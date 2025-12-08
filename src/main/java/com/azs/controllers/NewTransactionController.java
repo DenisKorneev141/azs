@@ -5,6 +5,17 @@ import com.azs.model.UserSession;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Priority;
+import javafx.stage.Stage;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -15,6 +26,11 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.sql.PreparedStatement;
+import java.sql.Statement;
+import java.sql.ResultSet;
+import java.io.PrintWriter;
+import java.io.File;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ResourceBundle;
@@ -71,6 +87,9 @@ public class NewTransactionController implements Initializable {
     private JsonObject currentFuel;
     private JsonObject currentAzsData;
     private JsonObject currentUser;
+
+    // Добавьте это поле для Gson
+    private final Gson gson = new Gson();
 
     private double currentPrice = 0.0;
     private double liters = 0.0;
@@ -372,50 +391,8 @@ public class NewTransactionController implements Initializable {
             phone = "+" + phone.replaceAll("[^0-9]", "");
         }
 
-        // Отправляем запрос на сервер для поиска пользователя
-        searchUserByPhone(phone);
-    }
-
-    private void searchUserByPhone(String phone) {
-        // Создаем URL для поиска пользователя
-        String url = ApiClient.getServerUrl() + "/api/users/search?phone=" + phone;
-
-        CompletableFuture.supplyAsync(() -> {
-            try {
-                URL apiUrl = new URL(url);
-                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) apiUrl.openConnection();
-                conn.setRequestMethod("GET");
-                conn.setRequestProperty("Accept", "application/json");
-                conn.setConnectTimeout(5000);
-                conn.setReadTimeout(5000);
-
-                int responseCode = conn.getResponseCode();
-                if (responseCode == 200) {
-                    try (java.io.BufferedReader br = new java.io.BufferedReader(
-                            new java.io.InputStreamReader(conn.getInputStream(), "utf-8"))) {
-
-                        StringBuilder response = new StringBuilder();
-                        String responseLine;
-                        while ((responseLine = br.readLine()) != null) {
-                            response.append(responseLine.trim());
-                        }
-
-                        com.google.gson.Gson gson = new com.google.gson.Gson();
-                        return gson.fromJson(response.toString(), JsonObject.class);
-                    }
-                } else {
-                    JsonObject error = new JsonObject();
-                    error.addProperty("success", false);
-                    error.addProperty("message", "Ошибка сервера: " + responseCode);
-                    return error;
-                }
-            } catch (Exception e) {
-                JsonObject error = new JsonObject();
-                error.addProperty("success", false);
-                error.addProperty("message", "Ошибка подключения: " + e.getMessage());
-                return error;
-            }
-        }).thenAccept(result -> {
+        // Используем метод из ApiClient для поиска пользователя
+        ApiClient.searchUserByPhone(phone).thenAccept(result -> {
             Platform.runLater(() -> {
                 if (result.get("success").getAsBoolean()) {
                     currentUser = result.getAsJsonObject("user");
@@ -575,59 +552,310 @@ public class NewTransactionController implements Initializable {
 
         statusLabel.setText("⏳ Сохранение транзакции...");
 
-        // Отправляем транзакцию на сервер
-        saveTransaction(transaction);
-    }
-
-    private void saveTransaction(JsonObject transaction) {
-        // Создаем финальные копии переменных для использования в лямбда-выражениях
-        final double finalTotalAmount = totalAmount;
-        final double finalLiters = liters;
-        final int finalAzsId = azsId;
-        final int finalSelectedNozzle = selectedNozzle;
-        final double finalBonusSpend = bonusSpend;
-        final int finalUserId = userId;
-
-        System.out.println("📤 Отправка транзакции на сервер:");
-        System.out.println("   Топливо: " + transaction.get("fuel_type").getAsString());
-        System.out.println("   Литры: " + transaction.get("liters").getAsDouble());
-        System.out.println("   Сумма: " + transaction.get("total_amount").getAsDouble());
-        System.out.println("   АЗС ID: " + transaction.get("azs_id").getAsInt());
-        System.out.println("   Колонка: " + transaction.get("nozzle").getAsInt());
-        System.out.println("   Пользователь ID: " + transaction.get("user_id").getAsInt());
-
-        ApiClient.createTransaction(transaction).thenAccept(result -> {
+        // Отправляем транзакцию на сервер через API
+        ApiClient.createTransaction(transaction).thenAccept(response -> {
             Platform.runLater(() -> {
-                System.out.println("📥 Ответ от сервера: " + result.toString());
+                if (response.get("success").getAsBoolean()) {
+                    // Успешное сохранение транзакции
 
-                if (result.get("success").getAsBoolean()) {
                     // Обновляем статус колонки на "busy"
-                    updateNozzleStatus(finalAzsId, finalSelectedNozzle, "busy");
+                    updateNozzleStatus(azsId, selectedNozzle, "busy");
 
                     // Обновляем статистику пользователя
-                    if (finalUserId > 0) {
-                        updateUserStats(finalUserId, finalBonusSpend, finalTotalAmount, finalLiters);
-                    }
+                    updateUserStats(userId, transaction);
 
-                    showAlert("Транзакция успешно сохранена!", Alert.AlertType.INFORMATION);
-                    statusLabel.setText("✅ Транзакция успешно завершена!");
+                    // Генерируем чек
+                    ApiClient.generateReceipt(transaction).thenAccept(receiptResponse -> {
+                        Platform.runLater(() -> {
+                            if (receiptResponse.get("success").getAsBoolean()) {
+                                JsonObject receipt = receiptResponse.getAsJsonObject("receipt");
 
-                    // Обновляем статистику в UserSession
-                    UserSession.setTodaysTotal(UserSession.getTodaysTotal() + finalTotalAmount);
-                    UserSession.setTodaysTransactions(UserSession.getTodaysTransactions() + 1);
-                    UserSession.setTodaysLiters(UserSession.getTodaysLiters() + finalLiters);
+                                // Показываем чек пользователю
+                                showReceiptToUser(receipt);
 
-                    // Сбрасываем форму
-                    resetForm();
+                                // Предлагаем опции с чеком
+                                offerReceiptOptions(receipt);
+
+                                statusLabel.setText("✅ Транзакция успешно сохранена");
+
+                                // Сбрасываем форму для новой транзакции
+                                resetForm();
+
+                            } else {
+                                // Чек не сгенерирован, но транзакция сохранена
+                                showAlert("Транзакция сохранена, но чек не сгенерирован: " +
+                                                receiptResponse.get("message").getAsString(),
+                                        Alert.AlertType.WARNING);
+                                statusLabel.setText("✅ Транзакция сохранена (чек не создан)");
+                                resetForm();
+                            }
+                        });
+                    }).exceptionally(e -> {
+                        Platform.runLater(() -> {
+                            showAlert("Ошибка генерации чека: " + e.getMessage(),
+                                    Alert.AlertType.WARNING);
+                            statusLabel.setText("✅ Транзакция сохранена");
+                            resetForm();
+                        });
+                        return null;
+                    });
 
                 } else {
-                    String errorMessage = result.get("message").getAsString();
-                    System.err.println("❌ Ошибка сохранения транзакции: " + errorMessage);
-                    showAlert("Ошибка сохранения транзакции: " + errorMessage, Alert.AlertType.ERROR);
+                    // Ошибка сохранения транзакции
+                    showAlert("Ошибка сохранения транзакции: " +
+                                    response.get("message").getAsString(),
+                            Alert.AlertType.ERROR);
                     statusLabel.setText("❌ Ошибка сохранения транзакции");
                 }
             });
+        }).exceptionally(e -> {
+            Platform.runLater(() -> {
+                showAlert("Ошибка соединения: " + e.getMessage(),
+                        Alert.AlertType.ERROR);
+                statusLabel.setText("❌ Ошибка соединения с сервером");
+            });
+            return null;
         });
+    }
+
+    private void showReceiptToUser(JsonObject receipt) {
+        String receiptText = receipt.get("formatted_text").getAsString();
+        String receiptNumber = receipt.get("receipt_number").getAsString();
+
+        // Создаем диалоговое окно с чеком
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Чек №" + receiptNumber);
+        alert.setHeaderText("Чек об оплате");
+        alert.setResizable(true);
+
+        // Создаем TextArea для отображения чека
+        TextArea textArea = new TextArea(receiptText);
+        textArea.setEditable(false);
+        textArea.setWrapText(true);
+        textArea.setPrefSize(400, 500);
+
+        // Устанавливаем моноширинный шрифт для правильного форматирования
+        textArea.setStyle("-fx-font-family: 'Monospaced'; -fx-font-size: 12px;");
+
+        // Создаем кнопки
+        ButtonType saveButton = new ButtonType("Сохранить", ButtonBar.ButtonData.OK_DONE);
+        ButtonType printButton = new ButtonType("Печать", ButtonBar.ButtonData.OTHER);
+        ButtonType closeButton = new ButtonType("Закрыть", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+        alert.getButtonTypes().setAll(saveButton, printButton, closeButton);
+
+        // Добавляем TextArea в диалог
+        alert.getDialogPane().setContent(textArea);
+
+        // Увеличиваем размер окна
+        alert.getDialogPane().setPrefSize(450, 550);
+
+        // Обработка нажатия кнопок
+        alert.showAndWait().ifPresent(response -> {
+            if (response == saveButton) {
+                saveReceiptToFile(receipt);
+            } else if (response == printButton) {
+                printReceipt(receipt);
+            }
+        });
+    }
+
+    /**
+     * Сохранить чек в файл
+     */
+    private void saveReceiptToFile(JsonObject receipt) {
+        try {
+            String receiptNumber = receipt.get("receipt_number").getAsString();
+            String receiptText = receipt.get("formatted_text").getAsString();
+
+            // Создаем имя файла
+            String fileName = "Чек_" + receiptNumber + ".txt";
+
+            // Сохраняем в домашнюю директорию пользователя
+            String homeDir = System.getProperty("user.home");
+            File file = new File(homeDir + "/" + fileName);
+
+            // Сохраняем чек в файл
+            try (PrintWriter writer = new PrintWriter(file, "UTF-8")) {
+                writer.println(receiptText);
+                writer.println("\nДата сохранения: " + new java.util.Date());
+            }
+
+            showAlert("Чек сохранен в файл:\n" + file.getAbsolutePath(),
+                    Alert.AlertType.INFORMATION);
+
+        } catch (Exception e) {
+            showAlert("Ошибка сохранения чека: " + e.getMessage(),
+                    Alert.AlertType.ERROR);
+        }
+    }
+
+    /**
+     * Распечатать чек
+     */
+    private void printReceipt(JsonObject receipt) {
+        try {
+            String receiptText = receipt.get("formatted_text").getAsString();
+
+            // Сохраняем во временный файл для печати
+            File tempFile = File.createTempFile("receipt_", ".txt");
+            try (PrintWriter writer = new PrintWriter(tempFile, "UTF-8")) {
+                writer.print(receiptText);
+            }
+
+            // Пытаемся напечатать в зависимости от ОС
+            String os = System.getProperty("os.name").toLowerCase();
+
+            if (os.contains("win")) {
+                // Для Windows используем блокнот для печати
+                Runtime.getRuntime().exec("notepad /p " + tempFile.getAbsolutePath());
+            } else if (os.contains("mac")) {
+                // Для macOS
+                Runtime.getRuntime().exec("lp " + tempFile.getAbsolutePath());
+            } else if (os.contains("nix") || os.contains("nux")) {
+                // Для Linux
+                Runtime.getRuntime().exec("lp " + tempFile.getAbsolutePath());
+            } else {
+                // Для других систем сохраняем файл
+                saveReceiptToFile(receipt);
+                showAlert("Печать не поддерживается в вашей системе. Чек сохранен в файл.",
+                        Alert.AlertType.INFORMATION);
+                return;
+            }
+
+            showAlert("Чек отправлен на печать", Alert.AlertType.INFORMATION);
+
+        } catch (Exception e) {
+            showAlert("Ошибка печати чека: " + e.getMessage(),
+                    Alert.AlertType.ERROR);
+        }
+    }
+
+    /**
+     * Предложить опции с чеком
+     */
+    private void offerReceiptOptions(JsonObject receipt) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Чек сгенерирован");
+        alert.setHeaderText("Чек №" + receipt.get("receipt_number").getAsString() + " успешно создан");
+        alert.setContentText("Что вы хотите сделать с чеком?");
+
+        ButtonType showButton = new ButtonType("Показать", ButtonBar.ButtonData.YES);
+        ButtonType saveButton = new ButtonType("Сохранить", ButtonBar.ButtonData.OK_DONE);
+        ButtonType printButton = new ButtonType("Печать", ButtonBar.ButtonData.OTHER);
+        ButtonType skipButton = new ButtonType("Пропустить", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+        alert.getButtonTypes().setAll(showButton, saveButton, printButton, skipButton);
+
+        alert.showAndWait().ifPresent(response -> {
+            if (response == showButton) {
+                showReceiptToUser(receipt);
+            } else if (response == saveButton) {
+                saveReceiptToFile(receipt);
+            } else if (response == printButton) {
+                printReceipt(receipt);
+            }
+        });
+    }
+
+    private boolean saveTransaction(JsonObject transaction) {
+        try (Connection conn = getConnection()) {
+            conn.setAutoCommit(false); // Начинаем транзакцию
+
+            String sql = "INSERT INTO transactions (" +
+                    "fuel_id, user_id, azs_id, nozzle, fuel_type, " +
+                    "liters, price_per_liter, total_amount, cash_in, " +
+                    "change, bonus_spent, payment_method, status, created_at" +
+                    ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+            try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                pstmt.setInt(1, transaction.get("fuel_id").getAsInt());
+                pstmt.setInt(2, transaction.get("user_id").getAsInt());
+                pstmt.setInt(3, transaction.get("azs_id").getAsInt());
+                pstmt.setInt(4, transaction.get("nozzle").getAsInt());
+                pstmt.setString(5, transaction.get("fuel_type").getAsString());
+                pstmt.setDouble(6, transaction.get("liters").getAsDouble());
+                pstmt.setDouble(7, transaction.get("price_per_liter").getAsDouble());
+                pstmt.setDouble(8, transaction.get("total_amount").getAsDouble());
+                pstmt.setDouble(9, transaction.get("cash_in").getAsDouble());
+                pstmt.setDouble(10, transaction.get("change").getAsDouble());
+                pstmt.setDouble(11, transaction.get("bonus_spent").getAsDouble());
+                pstmt.setString(12, transaction.get("payment_method").getAsString());
+                pstmt.setString(13, transaction.get("status").getAsString());
+
+                String createdAtStr = transaction.get("created_at").getAsString();
+                java.time.LocalDateTime localDateTime = java.time.LocalDateTime.parse(createdAtStr);
+                pstmt.setTimestamp(14, java.sql.Timestamp.valueOf(localDateTime));
+
+                int rowsAffected = pstmt.executeUpdate();
+
+                if (rowsAffected > 0) {
+                    // Получаем ID созданной транзакции
+                    ResultSet generatedKeys = pstmt.getGeneratedKeys();
+                    int transactionId = -1;
+                    if (generatedKeys.next()) {
+                        transactionId = generatedKeys.getInt(1);
+                        transaction.addProperty("id", transactionId);
+                    }
+
+                    // Обновляем статистику пользователя если это не гость
+                    int userId = transaction.get("user_id").getAsInt();
+                    if (userId > 0) {
+                        updateUserStats(userId, transaction);
+                    }
+
+                    // Автоматически генерируем чек
+                    generateReceiptAutomatically(transaction);
+
+                    conn.commit(); // Коммитим транзакцию
+
+                    System.out.println("✅ Транзакция сохранена в БД. ID: " + transactionId);
+                    return true;
+                } else {
+                    conn.rollback();
+                    return false;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("❌ Ошибка SQL при сохранении транзакции: " + e.getMessage());
+            e.printStackTrace();
+        } catch (Exception e) {
+            System.err.println("❌ Общая ошибка при сохранении транзакции: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    // Добавьте этот метод в класс
+    private Connection getConnection() throws SQLException {
+        return com.azs.DatabaseUtil.getConnection();
+    }
+
+    private void generateReceiptAutomatically(JsonObject transaction) {
+        // Вызываем API для генерации чека
+        try {
+            URL url = new URL("http://localhost:8080/api/receipts/generate");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+
+            try (OutputStream os = conn.getOutputStream()) {
+                byte[] input = gson.toJson(transaction).getBytes("utf-8");
+                os.write(input, 0, input.length);
+            }
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode == 200) {
+                System.out.println("✅ Чек автоматически сгенерирован для транзакции ID: " + transaction.get("id").getAsInt());
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Ошибка при автоматической генерации чека: " + e.getMessage());
+        }
     }
 
     private void updateNozzleStatus(int azsId, int nozzleNumber, String newStatus) {
@@ -660,23 +888,39 @@ public class NewTransactionController implements Initializable {
         });
     }
 
-    private void updateUserStats(int userId, double bonusSpent, double totalAmount, double liters) {
+    private void updateUserStats(int userId, JsonObject transaction) {
+        try {
+            // Рассчитываем новые бонусы (например, 1% от суммы)
+            double bonusSpent = transaction.get("bonus_spent").getAsDouble();
+            double totalAmount = transaction.get("total_amount").getAsDouble();
+            double liters = transaction.get("liters").getAsDouble();
+
+            // Рассчитываем начисленные бонусы
+            double bonusEarned = totalAmount * 0.01;
+
+            // Обновляем статистику пользователя
+            if (userId > 0) {
+                updateUserBalanceInDB(userId, bonusSpent, bonusEarned, totalAmount, liters);
+            }
+
+        } catch (Exception e) {
+            System.err.println("Ошибка обновления статистики пользователя: " + e.getMessage());
+        }
+    }
+
+    private void updateUserBalanceInDB(int userId, double bonusSpent, double bonusEarned,
+                                       double totalSpentIncrement, double totalLitersIncrement) {
         // Создаем URL для обновления баланса пользователя
         String url = ApiClient.getServerUrl() + "/api/users/" + userId + "/update-balance";
-
-        // Рассчитываем новые бонусы (например, 1% от суммы)
-        final double bonusEarned = totalAmount * 0.01;
-        final double newBalance = userBonusBalance - bonusSpent + bonusEarned;
 
         CompletableFuture.runAsync(() -> {
             try {
                 // Создаем JSON объект с данными для обновления
                 JsonObject updateData = new JsonObject();
-                updateData.addProperty("balance", newBalance);
                 updateData.addProperty("bonus_spent", bonusSpent);
                 updateData.addProperty("bonus_earned", bonusEarned);
-                updateData.addProperty("total_spent_increment", totalAmount);
-                updateData.addProperty("total_liters_increment", liters);
+                updateData.addProperty("total_spent_increment", totalSpentIncrement);
+                updateData.addProperty("total_liters_increment", totalLitersIncrement);
 
                 // Отправляем запрос на обновление
                 URL apiUrl = new URL(url);
@@ -688,7 +932,6 @@ public class NewTransactionController implements Initializable {
                 conn.setConnectTimeout(5000);
                 conn.setReadTimeout(5000);
 
-                com.google.gson.Gson gson = new com.google.gson.Gson();
                 String jsonInput = gson.toJson(updateData);
 
                 try (OutputStream os = conn.getOutputStream()) {
@@ -699,7 +942,8 @@ public class NewTransactionController implements Initializable {
                 int responseCode = conn.getResponseCode();
                 if (responseCode == 200) {
                     System.out.println("Пользователь ID " + userId +
-                            ": баланс обновлен на " + newBalance + " BYN");
+                            ": баланс обновлен (списано: " + bonusSpent +
+                            ", начислено: " + bonusEarned + ")");
                 } else {
                     System.err.println("Ошибка обновления баланса пользователя: " + responseCode);
                 }
@@ -749,6 +993,9 @@ public class NewTransactionController implements Initializable {
 
         // Обновляем статус колонок
         loadNozzleStatus();
+
+        // Фокус на первое поле
+        tfAmount.requestFocus();
     }
 
     private void updateServerStatus() {

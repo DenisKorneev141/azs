@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.control.Button?>
-<?import javafx.scene.control.DatePicker?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
@@ -13,13 +12,7 @@
     <!-- Заголовок и фильтры -->
     <HBox alignment="CENTER_LEFT" spacing="20">
         <Label style="-fx-font-size: 36px; -fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="Последние продажи" />
-        <HBox alignment="CENTER_LEFT" spacing="15" HBox.hgrow="ALWAYS">
-            <DatePicker fx:id="startDatePicker" promptText="С даты" />
-            <Label text="—" />
-            <DatePicker fx:id="endDatePicker" promptText="По дату" />
-            <Button fx:id="filterButton" style="-fx-background-color: #3498db; -fx-text-fill: white;" text="Применить" />
-            <Button fx:id="resetFilterButton" style="-fx-background-color: #95a5a6; -fx-text-fill: white;" text="Сбросить" />
-        </HBox>
+        <HBox alignment="CENTER_LEFT" spacing="15" HBox.hgrow="ALWAYS" />
     </HBox>
 
     <!-- Таблица продаж -->
@@ -60,7 +53,5 @@
     <!-- Кнопки управления -->
     <HBox alignment="CENTER" spacing="20">
         <Button fx:id="newSaleButton" style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 12 25; -fx-background-radius: 8; -fx-pref-width: 180;" text="➕ Новая продажа" />
-        <Button fx:id="printSelectedButton" style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-padding: 10 20; -fx-background-radius: 8;" text="🖨 Печать чека" />
-      <Button fx:id="printSelectedButton1" style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-padding: 10 20; -fx-background-radius: 8;" text="🔄 Обновить" />
     </HBox>
 </VBox>

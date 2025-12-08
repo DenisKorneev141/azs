@@ -33,7 +33,7 @@ public class NozzlesController {
     @FXML private Button nozzle3ToggleButton;
     @FXML private Button nozzle4ToggleButton;
 
-    @FXML private Button addNozzleButton;
+    //@FXML private Button addNozzleButton;
 
     private int azsId;
     private JsonObject nozzlesData;
@@ -60,7 +60,7 @@ public class NozzlesController {
         nozzle3QrButton.setOnAction(e -> showQrCode(3));
         nozzle4QrButton.setOnAction(e -> showQrCode(4));
 
-        addNozzleButton.setOnAction(e -> addNewNozzle());
+        //addNozzleButton.setOnAction(e -> addNewNozzle());
     }
 
     private void loadNozzlesData() {

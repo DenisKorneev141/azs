@@ -110,9 +110,6 @@ public class ApiClient {
         return makeGetRequest("/api/fuel");
     }
 
-    /**
-     * Получить данные для отчета
-     */
     public static CompletableFuture<JsonObject> getReportData(int azsId, String startDate, String endDate) {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -155,12 +152,6 @@ public class ApiClient {
         });
     }
 
-    /**
-     * Создать новую транзакцию
-     */
-    /**
-     * Создать новую транзакцию
-     */
     public static CompletableFuture<JsonObject> createTransaction(JsonObject transaction) {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -225,6 +216,94 @@ public class ApiClient {
         });
     }
 
+    // НОВЫЙ МЕТОД: генерация чека
+    public static CompletableFuture<JsonObject> generateReceipt(JsonObject transactionData) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                URL url = new URL(serverUrl + "/api/receipts/generate");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setRequestProperty("Accept", "application/json");
+                conn.setDoOutput(true);
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
+
+                try (OutputStream os = conn.getOutputStream()) {
+                    byte[] input = gson.toJson(transactionData).getBytes("utf-8");
+                    os.write(input, 0, input.length);
+                }
+
+                int responseCode = conn.getResponseCode();
+                if (responseCode == 200) {
+                    try (BufferedReader br = new BufferedReader(
+                            new InputStreamReader(conn.getInputStream(), "utf-8"))) {
+
+                        StringBuilder response = new StringBuilder();
+                        String responseLine;
+                        while ((responseLine = br.readLine()) != null) {
+                            response.append(responseLine.trim());
+                        }
+
+                        JsonObject jsonResponse = gson.fromJson(response.toString(), JsonObject.class);
+                        jsonResponse.addProperty("success", true);
+                        return jsonResponse;
+                    }
+                } else {
+                    JsonObject error = new JsonObject();
+                    error.addProperty("success", false);
+                    error.addProperty("message", "Ошибка генерации чека: " + responseCode);
+                    return error;
+                }
+            } catch (Exception e) {
+                JsonObject error = new JsonObject();
+                error.addProperty("success", false);
+                error.addProperty("message", "Ошибка: " + e.getMessage());
+                return error;
+            }
+        });
+    }
+
+    // НОВЫЙ МЕТОД: поиск пользователя по телефону
+    public static CompletableFuture<JsonObject> searchUserByPhone(String phone) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                URL url = new URL(serverUrl + "/api/users/search?phone=" + URLEncoder.encode(phone, "UTF-8"));
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("Accept", "application/json");
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
+
+                int responseCode = conn.getResponseCode();
+                if (responseCode == 200) {
+                    try (BufferedReader br = new BufferedReader(
+                            new InputStreamReader(conn.getInputStream(), "utf-8"))) {
+
+                        StringBuilder response = new StringBuilder();
+                        String responseLine;
+                        while ((responseLine = br.readLine()) != null) {
+                            response.append(responseLine.trim());
+                        }
+
+                        JsonObject jsonResponse = gson.fromJson(response.toString(), JsonObject.class);
+                        return jsonResponse;
+                    }
+                } else {
+                    JsonObject error = new JsonObject();
+                    error.addProperty("success", false);
+                    error.addProperty("message", "Ошибка: " + responseCode);
+                    return error;
+                }
+            } catch (Exception e) {
+                JsonObject error = new JsonObject();
+                error.addProperty("success", false);
+                error.addProperty("message", "Ошибка: " + e.getMessage());
+                return error;
+            }
+        });
+    }
+
     private static CompletableFuture<JsonObject> makeGetRequest(String endpoint) {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -265,11 +344,6 @@ public class ApiClient {
         });
     }
 
-    // ============= НОВЫЕ МЕТОДЫ =============
-
-    /**
-     * Получить данные оператора с сервера
-     */
     public static CompletableFuture<JsonObject> getOperatorData(String username) {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -305,9 +379,46 @@ public class ApiClient {
         });
     }
 
-    /**
-     * Создать дефолтные данные оператора
-     */
+    public static CompletableFuture<JsonObject> getReceiptByNumber(String receiptNumber) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                URL url = new URL(serverUrl + "/api/receipts/" + receiptNumber);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("Accept", "application/json");
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
+
+                int responseCode = conn.getResponseCode();
+                if (responseCode == 200) {
+                    try (BufferedReader br = new BufferedReader(
+                            new InputStreamReader(conn.getInputStream(), "utf-8"))) {
+
+                        StringBuilder response = new StringBuilder();
+                        String responseLine;
+                        while ((responseLine = br.readLine()) != null) {
+                            response.append(responseLine.trim());
+                        }
+
+                        JsonObject jsonResponse = gson.fromJson(response.toString(), JsonObject.class);
+                        jsonResponse.addProperty("success", true);
+                        return jsonResponse;
+                    }
+                } else {
+                    JsonObject error = new JsonObject();
+                    error.addProperty("success", false);
+                    error.addProperty("message", "Чек не найден");
+                    return error;
+                }
+            } catch (Exception e) {
+                JsonObject error = new JsonObject();
+                error.addProperty("success", false);
+                error.addProperty("message", "Ошибка: " + e.getMessage());
+                return error;
+            }
+        });
+    }
+
     private static JsonObject createDefaultOperatorData(String username) {
         JsonObject data = new JsonObject();
         data.addProperty("success", true);
@@ -320,9 +431,6 @@ public class ApiClient {
         return data;
     }
 
-    /**
-     * Получить текущую сумму в кассе
-     */
     public static CompletableFuture<Double> getCashAmount(String username) {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -357,7 +465,6 @@ public class ApiClient {
         });
     }
 
-    // В класс ApiClient добавьте:
     public static CompletableFuture<JsonObject> getRecentTransactions(int azsId, int limit) {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -398,9 +505,6 @@ public class ApiClient {
         });
     }
 
-    /**
-     * Проверить статус сервера
-     */
     public static CompletableFuture<Boolean> checkServerStatus() {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -457,9 +561,6 @@ public class ApiClient {
         });
     }
 
-    /**
-     * Обновить статус колонки
-     */
     public static CompletableFuture<JsonObject> updateNozzleStatus(int azsId, int nozzleNumber, String newStatus) {
         return CompletableFuture.supplyAsync(() -> {
             try {

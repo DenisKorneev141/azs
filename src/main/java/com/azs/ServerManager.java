@@ -5,6 +5,8 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpExchange;
 import com.google.gson.*;
 import java.io.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.net.InetSocketAddress;
 import java.sql.*;
 import java.util.Map;
@@ -39,10 +41,13 @@ public class ServerManager {
             server.createContext("/api/users", new UsersHandler());
             server.createContext("/api/transactions/recent", new RecentTransactionsHandler());
 
-            // НОВЫЕ ЭНДПОИНТЫ ДЛЯ ТРАНЗАКЦИЙ
+            // НОВЫЕ ЭНДПОИНТЫ ДЛЯ ТРАНЗАКЦИЙ И ЧЕКОВ
             server.createContext("/api/transactions", new TransactionsHandler());
             server.createContext("/api/users/search", new UserSearchHandler());
             server.createContext("/api/users/", new UserBalanceHandler()); // Для обновления баланса
+
+            // ВАЖНО: Добавьте обработчик чеков
+            server.createContext("/api/receipts/generate", new ReceiptHandler());
 
             // ВАЖНО: Создать контекст для колонок
             server.createContext("/api/azs/", new NozzlesHandler());
@@ -57,6 +62,7 @@ public class ServerManager {
             System.out.println("🌐 Доступ по: http://localhost:" + PORT);
             System.out.println("\nДоступные эндпоинты:");
             System.out.println("  POST /api/transactions - создать новую транзакцию");
+            System.out.println("  POST /api/receipts/generate - сгенерировать чек");
             System.out.println("  GET  /api/users/search?phone=... - поиск пользователя по телефону");
             System.out.println("  POST /api/users/{id}/update-balance - обновить баланс пользователя");
 
@@ -718,10 +724,10 @@ public class ServerManager {
             String sql = "INSERT INTO transactions (" +
                     "fuel_id, user_id, azs_id, nozzle, fuel_type, " +
                     "liters, price_per_liter, total_amount, cash_in, " +
-                    "change, bonus_spent, payment_method, status, created_at" +
-                    ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    "change, bonus_amount, bonus_spent, payment_method, status, created_at" +
+                    ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-            try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
+            try (PreparedStatement pstmt = getConnection().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
                 pstmt.setInt(1, transaction.get("fuel_id").getAsInt());
                 pstmt.setInt(2, transaction.get("user_id").getAsInt());
                 pstmt.setInt(3, transaction.get("azs_id").getAsInt());
@@ -732,18 +738,27 @@ public class ServerManager {
                 pstmt.setDouble(8, transaction.get("total_amount").getAsDouble());
                 pstmt.setDouble(9, transaction.get("cash_in").getAsDouble());
                 pstmt.setDouble(10, transaction.get("change").getAsDouble());
-                pstmt.setDouble(11, transaction.get("bonus_spent").getAsDouble());
-                pstmt.setString(12, transaction.get("payment_method").getAsString());
-                pstmt.setString(13, transaction.get("status").getAsString());
+                pstmt.setDouble(11, transaction.get("bonus_spent").getAsDouble()); // Для bonus_amount
+                pstmt.setDouble(12, transaction.get("bonus_spent").getAsDouble()); // Для bonus_spent
+                pstmt.setString(13, transaction.get("payment_method").getAsString());
+                pstmt.setString(14, transaction.get("status").getAsString());
 
                 // Преобразуем строку даты в Timestamp
                 String createdAtStr = transaction.get("created_at").getAsString();
                 java.time.LocalDateTime localDateTime = java.time.LocalDateTime.parse(createdAtStr);
-                pstmt.setTimestamp(14, java.sql.Timestamp.valueOf(localDateTime));
+                pstmt.setTimestamp(15, java.sql.Timestamp.valueOf(localDateTime));
 
                 int rowsAffected = pstmt.executeUpdate();
 
                 if (rowsAffected > 0) {
+                    // Получаем ID созданной транзакции
+                    ResultSet generatedKeys = pstmt.getGeneratedKeys();
+                    if (generatedKeys.next()) {
+                        int transactionId = generatedKeys.getInt(1);
+                        transaction.addProperty("id", transactionId);
+                        System.out.println("✅ Транзакция сохранена с ID: " + transactionId);
+                    }
+
                     // Обновляем статистику пользователя если это не гость
                     int userId = transaction.get("user_id").getAsInt();
                     if (userId > 0) {
@@ -770,21 +785,27 @@ public class ServerManager {
 
         private void updateUserStats(int userId, JsonObject transaction) {
             String updateSql = "UPDATE users SET " +
-                    "balance = balance - ? + (total_amount * 0.01), " + // Списание бонусов + начисление 1%
+                    "balance = balance - ? + ?, " + // Списание бонусов и начисление новых
                     "total_spent = total_spent + ?, " +
                     "total_liters = total_liters + ? " +
                     "WHERE id = ?";
 
             try (PreparedStatement pstmt = getConnection().prepareStatement(updateSql)) {
-                pstmt.setDouble(1, transaction.get("bonus_spent").getAsDouble());
-                pstmt.setDouble(2, transaction.get("total_amount").getAsDouble());
-                pstmt.setDouble(3, transaction.get("liters").getAsDouble());
-                pstmt.setInt(4, userId);
+                double bonusSpent = transaction.get("bonus_spent").getAsDouble();
+                double totalAmount = transaction.get("total_amount").getAsDouble();
+                double bonusEarned = totalAmount * 0.01; // 1% от суммы
+
+                pstmt.setDouble(1, bonusSpent);
+                pstmt.setDouble(2, bonusEarned);
+                pstmt.setDouble(3, totalAmount);
+                pstmt.setDouble(4, transaction.get("liters").getAsDouble());
+                pstmt.setInt(5, userId);
 
                 pstmt.executeUpdate();
                 System.out.println("✅ Статистика пользователя ID " + userId + " обновлена");
             } catch (SQLException e) {
                 System.err.println("❌ Ошибка обновления статистики пользователя: " + e.getMessage());
+                e.printStackTrace();
             }
         }
     }
@@ -947,6 +968,299 @@ public class ServerManager {
             }
 
             return false;
+        }
+    }
+
+    // ========== ОБРАБОТЧИК ЧЕКОВ ==========
+    static class ReceiptHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            try {
+                if ("POST".equals(exchange.getRequestMethod())) {
+                    String requestBody = readRequestBody(exchange);
+                    System.out.println("🧾 Получен запрос на генерацию чека: " + requestBody);
+
+                    JsonObject transactionData = gson.fromJson(requestBody, JsonObject.class);
+
+                    // Генерируем чек
+                    JsonObject receipt = generateReceipt(transactionData);
+
+                    // Сохраняем чек в базу данных
+                    saveReceipt(receipt);
+
+                    // Отправляем чек в ответе
+                    JsonObject response = new JsonObject();
+                    response.addProperty("success", true);
+                    response.add("receipt", receipt);
+
+                    sendJsonResponse(exchange, 200, response);
+                    System.out.println("✅ Чек сгенерирован и сохранен");
+
+                } else {
+                    sendError(exchange, 405, "Метод не поддерживается");
+                }
+            } catch (Exception e) {
+                System.err.println("❌ Ошибка в ReceiptHandler: " + e.getMessage());
+                e.printStackTrace();
+                sendError(exchange, 500, "Ошибка: " + e.getMessage());
+            }
+        }
+
+        private JsonObject generateReceipt(JsonObject transactionData) {
+            JsonObject receipt = new JsonObject();
+
+            // Генерируем уникальный номер чека
+            String receiptNumber = generateReceiptNumber();
+
+            // Добавляем информацию о транзакции
+            receipt.addProperty("receipt_number", receiptNumber);
+
+            // Добавляем transaction_id с безопасной проверкой
+            if (transactionData.has("id") && !transactionData.get("id").isJsonNull()) {
+                receipt.addProperty("transaction_id", transactionData.get("id").getAsInt());
+            } else {
+                receipt.addProperty("transaction_id", 0); // Значение по умолчанию
+            }
+
+            // Дата с безопасной проверкой
+            if (transactionData.has("created_at") && !transactionData.get("created_at").isJsonNull()) {
+                receipt.addProperty("date", transactionData.get("created_at").getAsString());
+                receipt.addProperty("created_at", transactionData.get("created_at").getAsString());
+            } else {
+                String currentDate = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                receipt.addProperty("date", currentDate);
+                receipt.addProperty("created_at", currentDate);
+            }
+
+            // Информация о топливе с безопасными проверками
+            receipt.addProperty("fuel_type", getStringValue(transactionData, "fuel_type", "Не указано"));
+            receipt.addProperty("liters", getDoubleValue(transactionData, "liters", 0.0));
+            receipt.addProperty("price_per_liter", getDoubleValue(transactionData, "price_per_liter", 0.0));
+            receipt.addProperty("total_amount", getDoubleValue(transactionData, "total_amount", 0.0));
+
+            // Информация об оплате
+            receipt.addProperty("payment_method", getStringValue(transactionData, "payment_method", "Не указано"));
+            receipt.addProperty("cash_in", getDoubleValue(transactionData, "cash_in", 0.0));
+            receipt.addProperty("change", getDoubleValue(transactionData, "change", 0.0));
+
+            // Информация о пользователе
+            int userId = getIntValue(transactionData, "user_id", 0);
+            String userName = "Гость";
+            if (userId > 0) {
+                userName = getUserName(userId);
+            }
+            receipt.addProperty("user_name", userName);
+            receipt.addProperty("user_id", userId);
+
+            // Информация об АЗС
+            int azsId = getIntValue(transactionData, "azs_id", 0);
+            receipt.addProperty("azs_id", azsId);
+            receipt.addProperty("azs_name", getAZSName(azsId));
+            receipt.addProperty("nozzle", getIntValue(transactionData, "nozzle", 0));
+
+            // Бонусная система
+            receipt.addProperty("bonus_spent", getDoubleValue(transactionData, "bonus_spent", 0.0));
+            receipt.addProperty("bonus_earned", calculateBonusEarned(getDoubleValue(transactionData, "total_amount", 0.0)));
+
+            // QR код для проверки чека
+            int transactionId = getIntValue(transactionData, "id", 0);
+            receipt.addProperty("qr_code_data", generateQRCodeData(receiptNumber, transactionId));
+
+            // Форматированный текст чека для печати
+            String formattedReceipt = formatReceiptText(receipt);
+            receipt.addProperty("formatted_text", formattedReceipt);
+
+            // Статус
+            receipt.addProperty("status", "Успешно");
+
+            return receipt;
+        }
+
+        // Вспомогательные методы для безопасного получения значений
+        private String getStringValue(JsonObject json, String key, String defaultValue) {
+            if (json.has(key) && !json.get(key).isJsonNull()) {
+                return json.get(key).getAsString();
+            }
+            return defaultValue;
+        }
+
+        private int getIntValue(JsonObject json, String key, int defaultValue) {
+            if (json.has(key) && !json.get(key).isJsonNull()) {
+                return json.get(key).getAsInt();
+            }
+            return defaultValue;
+        }
+
+        private double getDoubleValue(JsonObject json, String key, double defaultValue) {
+            if (json.has(key) && !json.get(key).isJsonNull()) {
+                return json.get(key).getAsDouble();
+            }
+            return defaultValue;
+        }
+
+        private String generateReceiptNumber() {
+            // Формат: R-20251207-0001 (R-YYYYMMDD-последовательность)
+            String date = new java.text.SimpleDateFormat("yyyyMMdd").format(new java.util.Date());
+
+            // Получаем последний номер чека за сегодня
+            String sql = "SELECT receipt_number FROM receipts WHERE receipt_number LIKE ? ORDER BY id DESC LIMIT 1";
+
+            try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
+                pstmt.setString(1, "R-" + date + "-%");
+                ResultSet rs = pstmt.executeQuery();
+
+                int sequence = 1;
+                if (rs.next()) {
+                    String lastNumber = rs.getString("receipt_number");
+                    String[] parts = lastNumber.split("-");
+                    if (parts.length == 3) {
+                        sequence = Integer.parseInt(parts[2]) + 1;
+                    }
+                }
+
+                return String.format("R-%s-%04d", date, sequence);
+
+            } catch (Exception e) {
+                // Если ошибка, генерируем случайный номер
+                return String.format("R-%s-%04d", date, (int)(Math.random() * 1000) + 1);
+            }
+        }
+
+        private String getUserName(int userId) {
+            String sql = "SELECT name FROM users WHERE id = ?";
+
+            try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
+                pstmt.setInt(1, userId);
+                ResultSet rs = pstmt.executeQuery();
+
+                if (rs.next()) {
+                    return rs.getString("name");
+                }
+            } catch (SQLException e) {
+                System.err.println("❌ Ошибка получения имени пользователя: " + e.getMessage());
+            }
+
+            return "Клиент";
+        }
+
+        private String getAZSName(int azsId) {
+            String sql = "SELECT name FROM azs WHERE id = ?";
+
+            try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
+                pstmt.setInt(1, azsId);
+                ResultSet rs = pstmt.executeQuery();
+
+                if (rs.next()) {
+                    return rs.getString("name");
+                }
+            } catch (SQLException e) {
+                System.err.println("❌ Ошибка получения названия АЗС: " + e.getMessage());
+            }
+
+            return "АЗС №" + azsId;
+        }
+
+        private double calculateBonusEarned(double totalAmount) {
+            // Начисляем 1% от суммы покупки в качестве бонусов
+            return Math.round((totalAmount * 0.01) * 100.0) / 100.0;
+        }
+
+        private String generateQRCodeData(String receiptNumber, int transactionId) {
+            // Генерируем данные для QR кода
+            return String.format("AZS-RECEIPT:%s:%d:%d",
+                    receiptNumber,
+                    transactionId,
+                    System.currentTimeMillis());
+        }
+
+        private String formatReceiptText(JsonObject receipt) {
+            StringBuilder sb = new StringBuilder();
+
+            sb.append("================================\n");
+            sb.append("           ЧЕК ОПЛАТЫ           \n");
+            sb.append("================================\n");
+            sb.append("Номер чека: ").append(receipt.get("receipt_number").getAsString()).append("\n");
+            sb.append("Дата: ").append(formatDateTime(receipt.get("date").getAsString())).append("\n");
+            sb.append("--------------------------------\n");
+            sb.append("АЗС: ").append(receipt.get("azs_name").getAsString()).append("\n");
+            sb.append("Колонка: ").append(receipt.get("nozzle").getAsInt()).append("\n");
+            sb.append("--------------------------------\n");
+            sb.append("Топливо: ").append(receipt.get("fuel_type").getAsString()).append("\n");
+            sb.append("Литров: ").append(String.format("%.2f", receipt.get("liters").getAsDouble())).append("\n");
+            sb.append("Цена за литр: ").append(String.format("%.2f", receipt.get("price_per_liter").getAsDouble())).append(" руб.\n");
+            sb.append("--------------------------------\n");
+            sb.append("Сумма: ").append(String.format("%.2f", receipt.get("total_amount").getAsDouble())).append(" руб.\n");
+            sb.append("Оплата: ").append(receipt.get("payment_method").getAsString()).append("\n");
+
+            if (receipt.get("payment_method").getAsString().equals("Наличные")) {
+                sb.append("Внесено: ").append(String.format("%.2f", receipt.get("cash_in").getAsDouble())).append(" руб.\n");
+                sb.append("Сдача: ").append(String.format("%.2f", receipt.get("change").getAsDouble())).append(" руб.\n");
+            }
+
+            sb.append("--------------------------------\n");
+            sb.append("Клиент: ").append(receipt.get("user_name").getAsString()).append("\n");
+
+            if (receipt.get("bonus_spent").getAsDouble() > 0) {
+                sb.append("Списано бонусов: ").append(String.format("%.2f", receipt.get("bonus_spent").getAsDouble())).append("\n");
+            }
+
+            sb.append("Начислено бонусов: ").append(String.format("%.2f", receipt.get("bonus_earned").getAsDouble())).append("\n");
+            sb.append("================================\n");
+            sb.append(" Спасибо за покупку!\n");
+            sb.append(" QR код для проверки:\n");
+            sb.append(" ").append(receipt.get("qr_code_data").getAsString()).append("\n");
+            sb.append("================================\n");
+
+            return sb.toString();
+        }
+
+        private String formatDateTime(String dateTimeStr) {
+            try {
+                java.time.LocalDateTime dateTime = java.time.LocalDateTime.parse(dateTimeStr);
+                return dateTime.format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss"));
+            } catch (Exception e) {
+                return dateTimeStr;
+            }
+        }
+
+        private void saveReceipt(JsonObject receipt) {
+            String sql = "INSERT INTO receipts (" +
+                    "receipt_number, transaction_id, azs_id, user_id, " +
+                    "fuel_type, liters, price_per_liter, total_amount, " +
+                    "payment_method, cash_in, change, bonus_spent, " +
+                    "bonus_earned, receipt_text, qr_code_data, status, " +
+                    "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+            try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
+                pstmt.setString(1, receipt.get("receipt_number").getAsString());
+                pstmt.setInt(2, receipt.get("transaction_id").getAsInt());
+                pstmt.setInt(3, receipt.get("azs_id").getAsInt());
+                pstmt.setInt(4, receipt.get("user_id").getAsInt());
+                pstmt.setString(5, receipt.get("fuel_type").getAsString());
+                pstmt.setDouble(6, receipt.get("liters").getAsDouble());
+                pstmt.setDouble(7, receipt.get("price_per_liter").getAsDouble());
+                pstmt.setDouble(8, receipt.get("total_amount").getAsDouble());
+                pstmt.setString(9, receipt.get("payment_method").getAsString());
+                pstmt.setDouble(10, receipt.get("cash_in").getAsDouble());
+                pstmt.setDouble(11, receipt.get("change").getAsDouble());
+                pstmt.setDouble(12, receipt.get("bonus_spent").getAsDouble());
+                pstmt.setDouble(13, receipt.get("bonus_earned").getAsDouble());
+                pstmt.setString(14, receipt.get("formatted_text").getAsString());
+                pstmt.setString(15, receipt.get("qr_code_data").getAsString());
+                pstmt.setString(16, receipt.get("status").getAsString());
+                pstmt.setTimestamp(17, new java.sql.Timestamp(System.currentTimeMillis()));
+
+                int rowsAffected = pstmt.executeUpdate();
+
+                if (rowsAffected > 0) {
+                    System.out.println("✅ Чек сохранен в БД: " + receipt.get("receipt_number").getAsString());
+                } else {
+                    System.err.println("❌ Не удалось сохранить чек в БД");
+                }
+            } catch (SQLException e) {
+                System.err.println("❌ Ошибка сохранения чека: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
 
