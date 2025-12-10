@@ -13,6 +13,15 @@ public class ReceiptHandler implements HttpHandler {
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
+        if ("OPTIONS".equals(exchange.getRequestMethod())) {
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, X-Requested-With");
+            exchange.getResponseHeaders().set("Access-Control-Max-Age", "86400");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
+            exchange.sendResponseHeaders(204, -1);
+            return;
+        }
         try {
             if ("POST".equals(exchange.getRequestMethod())) {
                 // Читаем тело запроса

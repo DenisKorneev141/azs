@@ -6,44 +6,60 @@
     <title>АЗС Phaeton - Клиентское приложение</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@latest/build/qrcode.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@19.2.16/build/css/intlTelInput.css">
+    <link rel="icon" type="image/png" href="Logo_black.png">
 </head>
 <body>
     <!-- Шапка сайта -->
     <header class="header">
         <div class="container">
             <div class="logo">
-                <i class="fas fa-gas-pump"></i>
-                <h1>АЗС <span class="highlight">Phaeton</span></h1>
+                <img src="Logo_black.png" alt="АЗС Phaeton" class="logo-img">
+                
             </div>
             
             <nav class="nav">
                 <ul>
-                    <li><a href="#" class="active" data-page="home"><i class="fas fa-home"></i> Главная</a></li>
-                    <li><a href="#" data-page="fuel"><i class="fas fa-oil-can"></i> Топливо</a></li>
-                    <li><a href="#" data-page="payment"><i class="fas fa-qrcode"></i> Оплата QR</a></li>
-                    <li><a href="#" data-page="stations"><i class="fas fa-map-marker-alt"></i> АЗС на карте</a></li>
-                    <li><a href="#" data-page="profile"><i class="fas fa-user"></i> Профиль</a></li>
+                    <li><a href="#" class="active" data-page="home"><i class="fas fa-home"></i> <span data-i18n="nav.home">Главная</span></a></li>
+                    <li><a href="#" data-page="fuel"><i class="fas fa-oil-can"></i> <span data-i18n="nav.fuel">Топливо</span></a></li>
+                    <li><a href="#" data-page="payment"><i class="fas fa-qrcode"></i> <span data-i18n="nav.payment">QR</span></a></li>
+                    <li><a href="#" data-page="stations"><i class="fas fa-map-marker-alt"></i> <span data-i18n="nav.stations">АЗС</span></a></li>
+                    <li><a href="#" data-page="profile"><i class="fas fa-user"></i> <span data-i18n="nav.profile">Профиль</span></a></li>
                 </ul>
             </nav>
             
-            <div class="auth-buttons" id="authButtons">
-                <button class="btn btn-outline" id="loginBtn">Войти</button>
-                <button class="btn btn-primary" id="registerBtn">Регистрация</button>
-            </div>
-            
-            <div class="user-info" id="userInfo" style="display: none;">
-                <div class="user-greeting">
-                    <i class="fas fa-user-circle"></i>
-                    <span id="userName">Иван Иванов</span>
+            <div class="header-controls">
+                <div class="theme-switcher">
+                    <button id="themeToggle" class="btn-icon">
+                        <i class="fas fa-moon"></i>
+                    </button>
                 </div>
-                <div class="user-balance">
-                    <i class="fas fa-coins"></i>
-                    <span id="userBalance">0.00 бонусов</span>
+                
+                <div class="language-switcher">
+                    <select id="languageSelect" class="select-small">
+                        <option value="ru">🇷🇺 Русский</option>
+                        <option value="en">en English</option>
+                    </select>
                 </div>
-                <button class="btn btn-logout" id="logoutBtn">
-                    <i class="fas fa-sign-out-alt"></i>
-                </button>
+                
+                <div class="auth-buttons" id="authButtons">
+                    <button class="btn btn-outline" id="loginBtn" data-i18n="auth.login">Войти</button>
+                    <button class="btn btn-primary" id="registerBtn" data-i18n="auth.register">Регистрация</button>
+                </div>
+                
+                <div class="user-info" id="userInfo" style="display: none;">
+                    <div class="user-greeting">
+                        <i class="fas fa-user-circle"></i>
+                        <span id="userName">Иван Иванов</span>
+                    </div>
+                    <div class="user-balance">
+                        <i class="fas fa-coins"></i>
+                        <span id="userBalance">0.00 бонусов</span>
+                    </div>
+                    <button class="btn btn-logout" id="logoutBtn">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </header>
@@ -54,63 +70,88 @@
             <!-- Баннер -->
             <section class="hero-banner">
                 <div class="hero-content">
-                    <h2>Заправка стала проще</h2>
-                    <p>Быстрая оплата QR-кодом, бонусная система и удобный сервис</p>
+                    <h2 data-i18n="hero.title">Заправка стала проще</h2>
+                    <p data-i18n="hero.subtitle">Быстрая оплата QR-кодом, бонусная система и удобный сервис</p>
                     <div class="hero-stats">
                         <div class="stat">
                             <i class="fas fa-gas-pump"></i>
                             <div>
                                 <h3>5+</h3>
-                                <p>Видов топлива</p>
+                                <p data-i18n="hero.fuelTypes">Видов топлива</p>
                             </div>
                         </div>
                         <div class="stat">
                             <i class="fas fa-map-marker-alt"></i>
                             <div>
                                 <h3>10+</h3>
-                                <p>АЗС в сети</p>
+                                <p data-i18n="hero.stations">АЗС в сети</p>
                             </div>
                         </div>
                         <div class="stat">
                             <i class="fas fa-users"></i>
                             <div>
                                 <h3>1000+</h3>
-                                <p>Довольных клиентов</p>
+                                <p data-i18n="hero.customers">Довольных клиентов (даже Рита Станкевич)</p>
                             </div>
                         </div>
                     </div>
+                    <div class="hero-actions">
+                        <button class="btn btn-primary btn-large" id="startRefuelBtn" data-i18n="hero.startRefuel">
+                            <i class="fas fa-play"></i> Начать заправку
+                        </button>
+                        <button class="btn btn-outline btn-large" id="learnMoreBtn" data-i18n="hero.learnMore">
+                            <i class="fas fa-info-circle"></i> Узнать больше
+                        </button>
+                    </div>
                 </div>
                 <div class="hero-image">
-                    <img src="assets/images/fuel-station.svg" alt="АЗС">
+                    <img src="login_window.jpg" alt="АЗС" class="hero-img">
                 </div>
             </section>
 
             <!-- Блок с ценами на топливо -->
             <section id="fuelSection" class="section">
-                <h2 class="section-title">Цены на топливо</h2>
+                <h2 class="section-title" data-i18n="fuel.title">Цены на топливо</h2>
                 <div class="fuel-prices" id="fuelPrices">
                     <!-- Динамически загружаемые цены -->
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span data-i18n="common.loading">Загрузка...</span>
+                    </div>
                 </div>
             </section>
 
             <!-- Блок оплаты QR-кодом -->
             <section id="paymentSection" class="section">
-                <h2 class="section-title">Оплата QR-кодом</h2>
+                <h2 class="section-title" data-i18n="payment.title">Оплата QR-кодом</h2>
                 <div class="qr-payment">
                     <div class="qr-container">
-                        <div id="qrCode"></div>
-                        <p class="qr-info">Отсканируйте код на колонке для начала заправки</p>
+                        <div id="qrCodeDisplay">
+                            <div class="qr-placeholder">
+                                <i class="fas fa-qrcode"></i>
+                                <p data-i18n="payment.scanCode">Отсканируйте код на колонке</p>
+                            </div>
+                        </div>
+                        <div class="qr-controls">
+                            <button class="btn btn-outline" id="generateQrBtn" data-i18n="payment.generateQr">
+                                <i class="fas fa-sync-alt"></i> Сгенерировать QR
+                            </button>
+                        </div>
                     </div>
                     <div class="qr-instructions">
-                        <h3>Как это работает:</h3>
+                        <h3 data-i18n="payment.howItWorks">Как это работает:</h3>
                         <ol>
-                            <li>Подойдите к колонке АЗС</li>
-                            <li>Отсканируйте QR-код на колонке</li>
-                            <li>Выберите тип и количество топлива</li>
-                            <li>Оплатите удобным способом</li>
-                            <li>Начните заправку</li>
+                            <li data-i18n="payment.step1">Подойдите к колонке АЗС</li>
+                            <li data-i18n="payment.step2">Отсканируйте QR-код на колонке</li>
+                            <li data-i18n="payment.step3">Выберите тип и количество топлива</li>
+                            <li data-i18n="payment.step4">Оплатите удобным способом</li>
+                            <li data-i18n="payment.step5">Начните заправку</li>
                         </ol>
-                        <button class="btn btn-primary btn-large" id="scanQrBtn">
+                        <div class="qr-input-group">
+                            <input type="number" id="azsIdInput" placeholder="ID АЗС" min="1" value="1" class="input-small">
+                            <input type="number" id="nozzleInput" placeholder="Колонка" min="1" max="4" value="1" class="input-small">
+                        </div>
+                        <button class="btn btn-primary btn-large" id="scanQrBtn" data-i18n="payment.scan">
                             <i class="fas fa-camera"></i> Сканировать QR
                         </button>
                     </div>
@@ -119,34 +160,52 @@
 
             <!-- Карта АЗС -->
             <section id="stationsSection" class="section">
-                <h2 class="section-title">Наши АЗС на карте</h2>
+                <h2 class="section-title" data-i18n="stations.title">Наши АЗС на карте</h2>
                 <div class="map-container">
-                    <div id="map"></div>
-                    <div class="stations-list" id="stationsList">
-                        <!-- Динамически загружаемые АЗС -->
+                    <div id="map">
+                        <div class="map-placeholder">
+                            <i class="fas fa-map"></i>
+                            <h3 data-i18n="stations.map">Карта АЗС</h3>
+                            <p data-i18n="stations.selectStation">Выберите АЗС из списка</p>
+                        </div>
+                    </div>
+                    <div class="stations-list">
+                        <h3 data-i18n="stations.list">Список АЗС</h3>
+                        <div id="stationsList">
+                            <!-- Динамически загружаемые АЗС -->
+                            <div class="loading">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <span data-i18n="common.loading">Загрузка...</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
 
             <!-- Профиль пользователя -->
             <section id="profileSection" class="section" style="display: none;">
+                <h2 class="section-title" data-i18n="profile.title">Личный кабинет</h2>
                 <div class="profile-container">
                     <div class="profile-sidebar">
                         <div class="profile-avatar">
                             <i class="fas fa-user-circle"></i>
                             <h3 id="profileName">Гость</h3>
+                            <p class="profile-email" id="profilePhone">Не авторизован</p>
                         </div>
                         <ul class="profile-menu">
-                            <li class="active"><a href="#" data-tab="profile"><i class="fas fa-user"></i> Профиль</a></li>
-                            <li><a href="#" data-tab="transactions"><i class="fas fa-history"></i> История</a></li>
-                            <li><a href="#" data-tab="bonuses"><i class="fas fa-coins"></i> Бонусы</a></li>
-                            <li><a href="#" data-tab="settings"><i class="fas fa-cog"></i> Настройки</a></li>
+                            <li class="active"><a href="#" data-tab="profile"><i class="fas fa-user"></i> <span data-i18n="profile.profile">Профиль</span></a></li>
+                            <li><a href="#" data-tab="transactions"><i class="fas fa-history"></i> <span data-i18n="profile.history">История</span></a></li>
+                            <li><a href="#" data-tab="bonuses"><i class="fas fa-coins"></i> <span data-i18n="profile.bonuses">Бонусы</span></a></li>
+                            <li><a href="#" data-tab="settings"><i class="fas fa-cog"></i> <span data-i18n="profile.settings">Настройки</span></a></li>
                         </ul>
                     </div>
                     <div class="profile-content">
-                        <!-- Контент будет загружаться динамически -->
                         <div id="profileTabContent">
-                            <!-- Динамический контент -->
+                            <!-- Контент будет загружаться динамически -->
+                            <div class="welcome-message">
+                                <h3 data-i18n="profile.welcome">Добро пожаловать!</h3>
+                                <p data-i18n="profile.selectTab">Выберите раздел в меню слева</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -159,22 +218,27 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-section">
-                    <h3>АЗС Phaeton</h3>
-                    <p>Качество топлива и сервиса на высшем уровне</p>
+                    <div class="footer-logo">
+                        <img src="Logo_black.png" alt="АЗС Phaeton" class="footer-logo-img">
+                        <h3>АЗС <span class="highlight">Phaeton</span></h3>
+                    </div>
+                    <p data-i18n="footer.slogan">Качество топлива и сервиса на высшем уровне</p>
                     <div class="social-links">
                         <a href="#"><i class="fab fa-vk"></i></a>
                         <a href="#"><i class="fab fa-telegram"></i></a>
                         <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-facebook"></i></a>
                     </div>
                 </div>
                 <div class="footer-section">
-                    <h3>Контакты</h3>
-                    <p><i class="fas fa-phone"></i> +7 (999) 123-45-67</p>
-                    <p><i class="fas fa-envelope"></i> info@azs-phaeton.ru</p>
-                    <p><i class="fas fa-clock"></i> Круглосуточно</p>
+                    <h3 data-i18n="footer.contacts">Контакты</h3>
+                    <p><i class="fas fa-phone"></i> +375 (33) 600 - 99 - 20</p>
+                    <p><i class="fas fa-envelope"></i> deniskorneev141@gmail.com</p>
+                    <p><i class="fas fa-clock"></i> <span data-i18n="footer.24h">Круглосуточно</span></p>
+                    <p><i class="fas fa-map-marker-alt"></i> <span data-i18n="footer.address">Минск, ул. Богдана Хмельницкого, 9 (ФИТР)</span></p>
                 </div>
                 <div class="footer-section">
-                    <h3>Скачайте наше приложение</h3>
+                    <h3 data-i18n="footer.download">Скачайте приложение</h3>
                     <div class="app-download">
                         <button class="btn-app">
                             <i class="fab fa-google-play"></i> Google Play
@@ -182,11 +246,19 @@
                         <button class="btn-app">
                             <i class="fab fa-app-store"></i> App Store
                         </button>
+                        <button class="btn-app">
+                            <i class="fab fa-windows"></i> Microsoft Store
+                        </button>
                     </div>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2024 АЗС Phaeton. Все права защищены.</p>
+                <p>&copy; 2024 АЗС Phaeton. <span data-i18n="footer.rights">Все права защищены.</span></p>
+                <div class="footer-links">
+                    <a href="#" data-i18n="footer.privacy">Политика конфиденциальности</a>
+                    <a href="#" data-i18n="footer.terms">Условия использования</a>
+                    <a href="#" data-i18n="footer.contact">Связаться с нами</a>
+                </div>
             </div>
         </div>
     </footer>
@@ -195,18 +267,30 @@
     <div id="loginModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h2>Вход в систему</h2>
+            <h2 data-i18n="auth.login">Вход в систему</h2>
             <form id="loginForm">
                 <div class="form-group">
-                    <label for="loginPhone">Номер телефона</label>
-                    <input type="tel" id="loginPhone" required placeholder="+7 (999) 123-45-67">
+                    <label for="loginPhone" data-i18n="auth.phone">Номер телефона</label>
+                    <input type="tel" id="loginPhone" required class="phone-input">
                 </div>
                 <div class="form-group">
-                    <label for="loginPassword">Пароль</label>
+                    <label for="loginPassword" data-i18n="auth.password">Пароль</label>
                     <input type="password" id="loginPassword" required>
+                    <div class="password-toggle">
+                        <i class="fas fa-eye" id="toggleLoginPassword"></i>
+                    </div>
                 </div>
-                <button type="submit" class="btn btn-primary btn-block">Войти</button>
-                <p class="form-link">Нет аккаунта? <a href="#" id="showRegister">Зарегистрироваться</a></p>
+                <div class="form-options">
+                    <label class="checkbox">
+                        <input type="checkbox" id="rememberMe">
+                        <span data-i18n="auth.remember">Запомнить меня</span>
+                    </label>
+                    <a href="#" class="forgot-password" data-i18n="auth.forgot">Забыли пароль?</a>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" id="loginSubmitBtn">
+                    <i class="fas fa-sign-in-alt"></i> <span data-i18n="auth.login">Войти</span>
+                </button>
+                <p class="form-link" data-i18n="auth.noAccount">Нет аккаунта? <a href="#" id="showRegister">Зарегистрироваться</a></p>
             </form>
         </div>
     </div>
@@ -214,46 +298,93 @@
     <div id="registerModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h2>Регистрация</h2>
+            <h2 data-i18n="auth.register">Регистрация</h2>
             <form id="registerForm">
                 <div class="form-group">
-                    <label for="regName">ФИО</label>
+                    <label for="regName" data-i18n="auth.fullName">ФИО</label>
                     <input type="text" id="regName" required placeholder="Иванов Иван Иванович">
                 </div>
                 <div class="form-group">
-                    <label for="regPhone">Номер телефона</label>
-                    <input type="tel" id="regPhone" required placeholder="+7 (999) 123-45-67">
+                    <label for="regPhone" data-i18n="auth.phone">Номер телефона</label>
+                    <input type="tel" id="regPhone" required class="phone-input">
                 </div>
                 <div class="form-group">
-                    <label for="regPassword">Пароль</label>
+                    <label for="regPassword" data-i18n="auth.password">Пароль</label>
                     <input type="password" id="regPassword" required>
+                    <div class="password-toggle">
+                        <i class="fas fa-eye" id="toggleRegPassword"></i>
+                    </div>
+                    <small data-i18n="auth.passwordHint">Минимум 6 символов</small>
                 </div>
                 <div class="form-group">
-                    <label for="regPasswordConfirm">Подтвердите пароль</label>
+                    <label for="regPasswordConfirm" data-i18n="auth.confirmPassword">Подтвердите пароль</label>
                     <input type="password" id="regPasswordConfirm" required>
+                    <div class="password-toggle">
+                        <i class="fas fa-eye" id="toggleRegPasswordConfirm"></i>
+                    </div>
                 </div>
-                <button type="submit" class="btn btn-primary btn-block">Зарегистрироваться</button>
-                <p class="form-link">Уже есть аккаунт? <a href="#" id="showLogin">Войти</a></p>
+                <div class="form-options">
+                    <label class="checkbox">
+                        <input type="checkbox" id="acceptTerms" required>
+                        <span data-i18n="auth.acceptTerms">Я принимаю политику конфиденциальности <a href="#">Условия использования</a></span>
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" id="registerSubmitBtn">
+                    <i class="fas fa-user-plus"></i> <span data-i18n="auth.register">Зарегистрироваться</span>
+                </button>
+                <p class="form-link" data-i18n="auth.haveAccount">Уже есть аккаунт? <a href="#" id="showLogin">Войти</a></p>
             </form>
         </div>
     </div>
 
     <div id="paymentModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content modal-wide">
             <span class="close">&times;</span>
-            <h2>Оплата заправки</h2>
+            <h2 data-i18n="payment.payment">Оплата заправки</h2>
             <div id="paymentContent">
                 <!-- Динамический контент оплаты -->
             </div>
         </div>
     </div>
 
+    <div id="qrScannerModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 data-i18n="payment.scanQr">Сканирование QR-кода</h2>
+            <div class="qr-scanner-container">
+                <div id="qrScanner">
+                    <div class="scanner-placeholder">
+                        <i class="fas fa-camera"></i>
+                        <p data-i18n="payment.scannerPlaceholder">Для сканирования QR-кода используйте камеру устройства</p>
+                    </div>
+                </div>
+                <div class="scanner-controls">
+                    <button class="btn btn-outline" id="switchCameraBtn" data-i18n="payment.switchCamera">
+                        <i class="fas fa-sync-alt"></i> Сменить камеру
+                    </button>
+                    <button class="btn btn-primary" id="toggleCameraBtn" data-i18n="payment.toggleCamera">
+                        <i class="fas fa-video"></i> Включить камеру
+                    </button>
+                </div>
+                <div class="manual-input">
+                    <h3 data-i18n="payment.orEnterCode">Или введите код вручную:</h3>
+                    <input type="text" id="manualQrInput" placeholder="Введите код с колонки" class="input-large">
+                    <button class="btn btn-primary btn-block" id="processManualQrBtn" data-i18n="payment.continue">
+                        <i class="fas fa-check"></i> Продолжить
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Уведомления -->
+    <div id="notificationContainer"></div>
+
     <!-- Подключение скриптов -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@latest/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@19.2.16/build/js/intlTelInput.min.js"></script>
     <script src="api/client.js"></script>
-    <script src="api/qr.js"></script>
-    <script src="auth.js"></script>
-    <script src="payment.js"></script>
-    <script src="profile.js"></script>
+    <script src="i18n.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

@@ -6,9 +6,15 @@ import com.sun.net.httpserver.HttpExchange;
 import com.google.gson.*;
 import java.io.*;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 import java.time.format.DateTimeFormatter;
 import java.net.InetSocketAddress;
 import java.sql.*;
+import java.util.Base64;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -37,13 +43,14 @@ public class ServerManager {
             server.createContext("/api/azs", new AzsHandler());
             server.createContext("/api/reports", new ReportsHandler());
             server.createContext("/api/fuel", new FuelHandler());
+            server.createContext("/", new CorsHandler());
             // ДОБАВЬТЕ ЭТО В ServerManager.java в метод startServer() после других контекстов:
             server.createContext("/api/users/register", new UserRegistrationHandler());
             server.createContext("/api/users/login", new UserLoginHandler());
             server.createContext("/api/users/profile", new UserProfileHandler());
             server.createContext("/api/users/transactions", new UserTransactionsHandler());
             server.createContext("/api/users/update", new UserUpdateHandler());
-            server.createContext("/api/qr/generate", new QrGenerateHandler());
+
             server.createContext("/api/operators", new OperatorsHandler());
             server.createContext("/api/qr/", new QrCodeHandler());
             server.createContext("/api/users", new UsersHandler());
@@ -82,10 +89,625 @@ public class ServerManager {
         }
     }
 
+    private static void logRequest(HttpExchange exchange) {
+        System.out.println("📥 " + exchange.getRequestMethod() + " " + exchange.getRequestURI().getPath() +
+                " | Headers: " + exchange.getRequestHeaders().entrySet());
+    }
+
+    // ========== ОБРАБОТЧИК CORS ==========
+    static class CorsHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            logRequest(exchange);
+            if ("OPTIONS".equals(exchange.getRequestMethod())) {
+                // Обрабатываем preflight запросы
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
+                exchange.getResponseHeaders().set("Access-Control-Max-Age", "86400");
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
+
+            // Для остальных запросов просто добавляем CORS заголовки
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            String path = exchange.getRequestURI().getPath();
+
+            if (path.startsWith("/api/")) {
+                // Перенаправляем на соответствующий обработчик
+                String newPath = path.substring(4); // Убираем /api
+                exchange.setAttribute("handlerPath", newPath);
+
+                // Здесь можно добавить логику перенаправления
+                // Или просто вернуть 404
+                JsonObject error = new JsonObject();
+                error.addProperty("success", false);
+                error.addProperty("error", "Endpoint not found: " + path);
+                sendJsonResponse(exchange, 404, error);
+            } else {
+                // Для корневого пути возвращаем информацию о сервере
+                JsonObject info = new JsonObject();
+                info.addProperty("server", "AZS Server");
+                info.addProperty("version", "1.0");
+                info.addProperty("status", "running");
+                info.addProperty("time", LocalDateTime.now().toString());
+                sendJsonResponse(exchange, 200, info);
+            }
+        }
+    }
+
+    // ========== ОБРАБОТЧИК РЕГИСТРАЦИИ ПОЛЬЗОВАТЕЛЯ ==========
+    // ========== ОБРАБОТЧИК РЕГИСТРАЦИИ ПОЛЬЗОВАТЕЛЯ ==========
+    static class UserRegistrationHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            try {
+                logRequest(exchange);
+
+                // ОБРАБОТКА OPTIONS ЗАПРОСОВ (CORS Preflight)
+                if ("OPTIONS".equals(exchange.getRequestMethod())) {
+                    exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                    exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                    exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, X-Requested-With");
+                    exchange.getResponseHeaders().set("Access-Control-Max-Age", "86400");
+                    exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
+                    exchange.sendResponseHeaders(204, -1);
+                    return;
+                }
+
+                // Проверяем метод запроса
+                if (!"POST".equals(exchange.getRequestMethod())) {
+                    System.out.println("❌ Неверный метод: " + exchange.getRequestMethod());
+                    sendError(exchange, 405, "Метод не поддерживается");
+                    return;
+                }
+
+                // УСТАНОВИТЬ CORS ЗАГОЛОВКИ ДЛЯ ОСНОВНОГО ОТВЕТА
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
+
+                String requestBody = readRequestBody(exchange);
+                System.out.println("📝 Тело запроса регистрации: " + requestBody);
+
+                JsonObject json;
+                try {
+                    json = gson.fromJson(requestBody, JsonObject.class);
+                } catch (Exception e) {
+                    System.err.println("❌ Ошибка парсинга JSON: " + e.getMessage());
+                    sendError(exchange, 400, "Неверный формат JSON");
+                    return;
+                }
+
+                // Проверяем обязательные поля
+                if (!json.has("username") || !json.has("phone") || !json.has("name") || !json.has("password")) {
+                    System.err.println("❌ Отсутствуют обязательные поля");
+                    JsonObject error = new JsonObject();
+                    error.addProperty("success", false);
+                    error.addProperty("message", "Отсутствуют обязательные поля");
+                    sendJsonResponse(exchange, 400, error);
+                    return;
+                }
+
+                String username = json.get("username").getAsString();
+                String phone = json.get("phone").getAsString();
+                String name = json.get("name").getAsString();
+                String password = json.get("password").getAsString();
+
+                System.out.println("📝 Регистрация пользователя: " + name + ", тел: " + phone);
+
+                // Проверяем, не зарегистрирован ли уже пользователь
+                String checkSql = "SELECT id FROM users WHERE phone = ? OR username = ?";
+                try (PreparedStatement checkStmt = getConnection().prepareStatement(checkSql)) {
+                    checkStmt.setString(1, phone);
+                    checkStmt.setString(2, username);
+                    ResultSet rs = checkStmt.executeQuery();
+
+                    if (rs.next()) {
+                        System.out.println("❌ Пользователь уже существует: " + phone);
+                        JsonObject error = new JsonObject();
+                        error.addProperty("success", false);
+                        error.addProperty("message", "Пользователь с таким телефоном или логином уже существует");
+                        sendJsonResponse(exchange, 400, error);
+                        return;
+                    }
+                } catch (SQLException e) {
+                    System.err.println("❌ Ошибка проверки пользователя: " + e.getMessage());
+                    sendError(exchange, 500, "Ошибка базы данных");
+                    return;
+                }
+
+                // Хешируем пароль
+                String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+
+                // Регистрируем пользователя
+                String insertSql = "INSERT INTO users (username, phone, password_hash, name, balance, total_spent, total_liters, is_active, created_at) " +
+                        "VALUES (?, ?, ?, ?, 0.00, 0.00, 0.00, true, NOW())";
+
+                try (PreparedStatement pstmt = getConnection().prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
+                    pstmt.setString(1, username);
+                    pstmt.setString(2, phone);
+                    pstmt.setString(3, hashedPassword);
+                    pstmt.setString(4, name);
+
+                    System.out.println("📝 Выполняем SQL: " + insertSql);
+
+                    int rowsAffected = pstmt.executeUpdate();
+
+                    if (rowsAffected > 0) {
+                        // Получаем ID нового пользователя
+                        ResultSet generatedKeys = pstmt.getGeneratedKeys();
+                        if (generatedKeys.next()) {
+                            int userId = generatedKeys.getInt(1);
+
+                            JsonObject response = new JsonObject();
+                            response.addProperty("success", true);
+                            response.addProperty("message", "Регистрация успешна");
+                            response.addProperty("userId", userId);
+
+                            // Создаем токен
+                            String token = generateToken(userId, username);
+                            response.addProperty("token", token);
+
+                            // Данные пользователя
+                            JsonObject userData = new JsonObject();
+                            userData.addProperty("id", userId);
+                            userData.addProperty("username", username);
+                            userData.addProperty("phone", phone);
+                            userData.addProperty("name", name);
+                            userData.addProperty("balance", 0.0);
+                            userData.addProperty("total_spent", 0.0);
+                            userData.addProperty("total_liters", 0.0);
+                            response.add("user", userData);
+
+                            System.out.println("✅ Зарегистрирован новый пользователь: " + name + " (ID: " + userId + ")");
+                            sendJsonResponse(exchange, 201, response);
+                        }
+                    } else {
+                        throw new SQLException("Не удалось создать пользователя");
+                    }
+                } catch (SQLException e) {
+                    System.err.println("❌ Ошибка регистрации в БД: " + e.getMessage());
+                    e.printStackTrace();
+                    sendError(exchange, 500, "Ошибка регистрации: " + e.getMessage());
+                }
+
+            } catch (Exception e) {
+                System.err.println("❌ Неожиданная ошибка регистрации: " + e.getMessage());
+                e.printStackTrace();
+                sendError(exchange, 500, "Внутренняя ошибка сервера");
+            }
+        }
+    }
+
+    // ========== ОБРАБОТЧИК ВХОДА ПОЛЬЗОВАТЕЛЯ ==========
+    static class UserLoginHandler implements HttpHandler {
+
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if ("OPTIONS".equals(exchange.getRequestMethod())) {
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, X-Requested-With");
+                exchange.getResponseHeaders().set("Access-Control-Max-Age", "86400");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
+            logRequest(exchange);
+            if (!"POST".equals(exchange.getRequestMethod())) {
+                sendError(exchange, 405, "Метод не поддерживается");
+                return;
+            }
+
+            try {
+                String requestBody = readRequestBody(exchange);
+                JsonObject json = gson.fromJson(requestBody, JsonObject.class);
+
+                String phone = json.get("phone").getAsString();
+                String password = json.get("password").getAsString();
+
+                JsonObject response = new JsonObject();
+
+                // Ищем пользователя по телефону
+                String sql = "SELECT id, username, phone, name, password_hash, balance, " +
+                        "total_spent, total_liters FROM users WHERE phone = ? AND is_active = true";
+
+                try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
+                    pstmt.setString(1, phone);
+                    ResultSet rs = pstmt.executeQuery();
+
+                    if (rs.next()) {
+                        String storedHash = rs.getString("password_hash");
+
+                        // Проверяем пароль
+                        if (BCrypt.checkpw(password, storedHash)) {
+                            int userId = rs.getInt("id");
+                            String username = rs.getString("username");
+                            String name = rs.getString("name");
+
+                            // Создаем ответ с данными пользователя
+                            response.addProperty("success", true);
+                            response.addProperty("message", "Авторизация успешна");
+
+                            // Данные пользователя
+                            JsonObject userData = new JsonObject();
+                            userData.addProperty("id", userId);
+                            userData.addProperty("username", username);
+                            userData.addProperty("phone", phone);
+                            userData.addProperty("name", name);
+                            userData.addProperty("balance", rs.getDouble("balance"));
+                            userData.addProperty("total_spent", rs.getDouble("total_spent"));
+                            userData.addProperty("total_liters", rs.getDouble("total_liters"));
+
+                            response.add("user", userData);
+
+                            // Создаем токен
+                            String token = generateToken(userId, username);
+                            response.addProperty("token", token);
+
+                            System.out.println("Успешный вход пользователя: " + name + " (ID: " + userId + ")");
+
+                        } else {
+                            response.addProperty("success", false);
+                            response.addProperty("message", "Неверный пароль");
+                            System.out.println("Неверный пароль для телефона: " + phone);
+                        }
+                    } else {
+                        response.addProperty("success", false);
+                        response.addProperty("message", "Пользователь не найден");
+                        System.out.println("Пользователь не найден: " + phone);
+                    }
+                }
+
+                sendJsonResponse(exchange, 200, response);
+
+            } catch (Exception e) {
+                System.err.println("Ошибка входа: " + e.getMessage());
+                e.printStackTrace();
+                sendError(exchange, 500, "Ошибка входа: " + e.getMessage());
+            }
+        }
+    }
+
+    // ========== ОБРАБОТЧИК ПРОФИЛЯ ПОЛЬЗОВАТЕЛЯ ==========
+    static class UserProfileHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            // В начале метода handle каждого обработчика
+            if ("OPTIONS".equals(exchange.getRequestMethod())) {
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, X-Requested-With");
+                exchange.getResponseHeaders().set("Access-Control-Max-Age", "86400");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
+            logRequest(exchange);
+            try {
+                // Проверяем авторизацию
+                String token = getTokenFromRequest(exchange);
+                if (token == null || !validateToken(token)) {
+                    sendError(exchange, 401, "Требуется авторизация");
+                    return;
+                }
+
+                // Получаем ID пользователя из токена
+                int userId = getUserIdFromToken(token);
+
+                if ("GET".equals(exchange.getRequestMethod())) {
+                    // Получаем данные пользователя
+                    String sql = "SELECT id, username, phone, name, balance, " +
+                            "total_spent, total_liters, created_at FROM users WHERE id = ?";
+
+                    try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
+                        pstmt.setInt(1, userId);
+                        ResultSet rs = pstmt.executeQuery();
+
+                        JsonObject response = new JsonObject();
+
+                        if (rs.next()) {
+                            JsonObject userData = new JsonObject();
+                            userData.addProperty("id", rs.getInt("id"));
+                            userData.addProperty("username", rs.getString("username"));
+                            userData.addProperty("phone", rs.getString("phone"));
+                            userData.addProperty("name", rs.getString("name"));
+                            userData.addProperty("balance", rs.getDouble("balance"));
+                            userData.addProperty("total_spent", rs.getDouble("total_spent"));
+                            userData.addProperty("total_liters", rs.getDouble("total_liters"));
+
+                            // Преобразуем дату
+                            java.sql.Timestamp timestamp = rs.getTimestamp("created_at");
+                            if (timestamp != null) {
+                                userData.addProperty("created_at", timestamp.toLocalDateTime().toString());
+                            }
+
+                            response.addProperty("success", true);
+                            response.add("user", userData);
+                        } else {
+                            response.addProperty("success", false);
+                            response.addProperty("message", "Пользователь не найден");
+                        }
+
+                        sendJsonResponse(exchange, 200, response);
+                    }
+
+                } else {
+                    sendError(exchange, 405, "Метод не поддерживается");
+                }
+
+            } catch (Exception e) {
+                System.err.println("Ошибка получения профиля: " + e.getMessage());
+                e.printStackTrace();
+                sendError(exchange, 500, "Ошибка сервера");
+            }
+        }
+    }
+
+    // ========== ОБРАБОТЧИК ИСТОРИИ ТРАНЗАКЦИЙ ==========
+    static class UserTransactionsHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            // В начале метода handle каждого обработчика
+            if ("OPTIONS".equals(exchange.getRequestMethod())) {
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, X-Requested-With");
+                exchange.getResponseHeaders().set("Access-Control-Max-Age", "86400");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
+            logRequest(exchange);
+            try {
+                // Проверяем авторизацию
+                String token = getTokenFromRequest(exchange);
+                if (token == null || !validateToken(token)) {
+                    sendError(exchange, 401, "Требуется авторизация");
+                    return;
+                }
+
+                // Получаем ID пользователя из токена
+                int userId = getUserIdFromToken(token);
+
+                // Получаем параметры запроса
+                String query = exchange.getRequestURI().getQuery();
+                int limit = 50;
+
+                if (query != null && query.contains("limit=")) {
+                    String[] params = query.split("&");
+                    for (String param : params) {
+                        if (param.startsWith("limit=")) {
+                            limit = Integer.parseInt(param.substring(6));
+                            break;
+                        }
+                    }
+                }
+
+                // Получаем историю транзакций
+                String sql = "SELECT t.id, t.fuel_type, t.liters, t.price_per_liter, t.total_amount, " +
+                        "t.payment_method, t.bonus_spent, t.status, t.created_at, " +
+                        "a.name as azs_name " +
+                        "FROM transactions t " +
+                        "LEFT JOIN azs a ON t.azs_id = a.id " +
+                        "WHERE t.user_id = ? " +
+                        "ORDER BY t.created_at DESC " +
+                        "LIMIT ?";
+
+                try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
+                    pstmt.setInt(1, userId);
+                    pstmt.setInt(2, limit);
+
+                    ResultSet rs = pstmt.executeQuery();
+
+                    JsonArray transactions = new JsonArray();
+
+                    while (rs.next()) {
+                        JsonObject trans = new JsonObject();
+                        trans.addProperty("id", rs.getInt("id"));
+                        trans.addProperty("fuel_type", rs.getString("fuel_type"));
+                        trans.addProperty("liters", rs.getDouble("liters"));
+                        trans.addProperty("price_per_liter", rs.getDouble("price_per_liter"));
+                        trans.addProperty("total_amount", rs.getDouble("total_amount"));
+                        trans.addProperty("payment_method", rs.getString("payment_method"));
+                        trans.addProperty("bonus_spent", rs.getDouble("bonus_spent"));
+                        trans.addProperty("status", rs.getString("status"));
+                        trans.addProperty("azs_name", rs.getString("azs_name"));
+
+                        // Форматируем дату
+                        java.sql.Timestamp timestamp = rs.getTimestamp("created_at");
+                        if (timestamp != null) {
+                            String formattedDate = timestamp.toLocalDateTime().format(
+                                    java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
+                            );
+                            trans.addProperty("created_at", formattedDate);
+                            trans.addProperty("timestamp", timestamp.getTime());
+                        }
+
+                        transactions.add(trans);
+                    }
+
+                    JsonObject response = new JsonObject();
+                    response.addProperty("success", true);
+                    response.add("transactions", transactions);
+                    response.addProperty("count", transactions.size());
+
+                    sendJsonResponse(exchange, 200, response);
+
+                    System.out.println(" Загружено " + transactions.size() + " транзакций для пользователя ID: " + userId);
+                }
+
+            } catch (Exception e) {
+                System.err.println("❌ Ошибка получения истории транзакций: " + e.getMessage());
+                e.printStackTrace();
+                sendError(exchange, 500, "Ошибка сервера");
+            }
+        }
+    }
+
+    // ========== ОБРАБОТЧИК ОБНОВЛЕНИЯ ПОЛЬЗОВАТЕЛЯ ==========
+    static class UserUpdateHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            // В начале метода handle каждого обработчика
+            if ("OPTIONS".equals(exchange.getRequestMethod())) {
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, X-Requested-With");
+                exchange.getResponseHeaders().set("Access-Control-Max-Age", "86400");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
+            logRequest(exchange);
+            try {
+                // Проверяем авторизацию
+                String token = getTokenFromRequest(exchange);
+                if (token == null || !validateToken(token)) {
+                    sendError(exchange, 401, "Требуется авторизация");
+                    return;
+                }
+
+                // Получаем ID пользователя из токена
+                int userId = getUserIdFromToken(token);
+
+                if ("PUT".equals(exchange.getRequestMethod())) {
+                    String requestBody = readRequestBody(exchange);
+                    JsonObject json = gson.fromJson(requestBody, JsonObject.class);
+
+                    // Собираем поля для обновления
+                    StringBuilder sqlBuilder = new StringBuilder("UPDATE users SET ");
+                    List<Object> params = new ArrayList<>();
+
+                    if (json.has("name")) {
+                        sqlBuilder.append("name = ?, ");
+                        params.add(json.get("name").getAsString());
+                    }
+
+                    if (json.has("phone")) {
+                        // Проверяем, не занят ли телефон
+                        String checkSql = "SELECT id FROM users WHERE phone = ? AND id != ?";
+                        try (PreparedStatement checkStmt = getConnection().prepareStatement(checkSql)) {
+                            checkStmt.setString(1, json.get("phone").getAsString());
+                            checkStmt.setInt(2, userId);
+                            ResultSet rs = checkStmt.executeQuery();
+
+                            if (rs.next()) {
+                                JsonObject error = new JsonObject();
+                                error.addProperty("success", false);
+                                error.addProperty("message", "Телефон уже используется другим пользователем");
+                                sendJsonResponse(exchange, 400, error);
+                                return;
+                            }
+                        }
+
+                        sqlBuilder.append("phone = ?, ");
+                        params.add(json.get("phone").getAsString());
+                    }
+
+                    if (json.has("password")) {
+                        String newPassword = json.get("password").getAsString();
+                        String hashedPassword = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+                        sqlBuilder.append("password_hash = ?, ");
+                        params.add(hashedPassword);
+                    }
+
+                    // Удаляем последнюю запятую
+                    sqlBuilder.setLength(sqlBuilder.length() - 2);
+                    sqlBuilder.append(" WHERE id = ?");
+                    params.add(userId);
+
+                    try (PreparedStatement pstmt = getConnection().prepareStatement(sqlBuilder.toString())) {
+                        for (int i = 0; i < params.size(); i++) {
+                            pstmt.setObject(i + 1, params.get(i));
+                        }
+
+                        int rowsAffected = pstmt.executeUpdate();
+
+                        JsonObject response = new JsonObject();
+                        if (rowsAffected > 0) {
+                            response.addProperty("success", true);
+                            response.addProperty("message", "Профиль обновлен");
+                        } else {
+                            response.addProperty("success", false);
+                            response.addProperty("message", "Не удалось обновить профиль");
+                        }
+
+                        sendJsonResponse(exchange, 200, response);
+                    }
+
+                } else {
+                    sendError(exchange, 405, "Метод не поддерживается");
+                }
+
+            } catch (Exception e) {
+                System.err.println("❌ Ошибка обновления пользователя: " + e.getMessage());
+                e.printStackTrace();
+                sendError(exchange, 500, "Ошибка сервера");
+            }
+        }
+    }
+
+
+    // ========== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ДЛЯ АВТОРИЗАЦИИ ==========
+    private static String generateToken(int userId, String username) {
+        // Простая реализация токена (в продакшн используйте JWT)
+        String tokenData = userId + ":" + username + ":" + System.currentTimeMillis();
+        return Base64.getEncoder().encodeToString(tokenData.getBytes());
+    }
+
+    private static String getTokenFromRequest(HttpExchange exchange) {
+        String authHeader = exchange.getRequestHeaders().getFirst("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+        return null;
+    }
+
+    private static boolean validateToken(String token) {
+        try {
+            String decoded = new String(Base64.getDecoder().decode(token));
+            String[] parts = decoded.split(":");
+            if (parts.length >= 3) {
+                // Проверяем, не истек ли токен (24 часа)
+                long tokenTime = Long.parseLong(parts[2]);
+                long currentTime = System.currentTimeMillis();
+                return (currentTime - tokenTime) < 24 * 60 * 60 * 1000;
+            }
+        } catch (Exception e) {
+            // Невалидный токен
+        }
+        return false;
+    }
+
+    private static int getUserIdFromToken(String token) {
+        try {
+            String decoded = new String(Base64.getDecoder().decode(token));
+            String[] parts = decoded.split(":");
+            if (parts.length >= 1) {
+                return Integer.parseInt(parts[0]);
+            }
+        } catch (Exception e) {
+            // Ошибка парсинга
+        }
+        return 0;
+    }
+
     // ========== ОБРАБОТЧИК АВТОРИЗАЦИИ ==========
     static class AuthHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+
+            if ("OPTIONS".equals(exchange.getRequestMethod())) {
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, X-Requested-With");
+                exchange.getResponseHeaders().set("Access-Control-Max-Age", "86400");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
             if (!"POST".equals(exchange.getRequestMethod())) {
                 sendError(exchange, 405, "Метод не поддерживается");
                 return;
@@ -330,6 +952,16 @@ public class ServerManager {
 
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            // В начале метода handle каждого обработчика
+            if ("OPTIONS".equals(exchange.getRequestMethod())) {
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, X-Requested-With");
+                exchange.getResponseHeaders().set("Access-Control-Max-Age", "86400");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
             try {
                 String query = exchange.getRequestURI().getQuery();
 
@@ -532,47 +1164,75 @@ public class ServerManager {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             try {
-                if ("GET".equals(exchange.getRequestMethod())) {
-                    JsonArray azsList = new JsonArray();
-                    String sql = "SELECT id, name, address, nozzle_count FROM azs ORDER BY id";
+                logRequest(exchange);
 
-                    try (Statement stmt = getConnection().createStatement();
+                // Добавьте обработку OPTIONS запросов
+                if ("OPTIONS".equals(exchange.getRequestMethod())) {
+                    exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                    exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                    exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept");
+                    exchange.getResponseHeaders().set("Access-Control-Max-Age", "86400");
+                    exchange.sendResponseHeaders(204, -1);
+                    return;
+                }
+
+                if ("GET".equals(exchange.getRequestMethod())) {
+                    System.out.println("📋 Запрос списка АЗС");
+
+                    JsonArray azsList = new JsonArray();
+
+                    // Проверяем подключение к БД
+                    Connection conn = getConnection();
+                    if (conn == null || conn.isClosed()) {
+                        System.err.println("❌ Нет подключения к БД");
+                        sendError(exchange, 500, "Нет подключения к базе данных");
+                        return;
+                    }
+
+                    String sql = "SELECT id, name, address, nozzle_count FROM azs WHERE is_active = true ORDER BY id";
+
+                    System.out.println("📋 SQL запрос: " + sql);
+
+                    try (Statement stmt = conn.createStatement();
                          ResultSet rs = stmt.executeQuery(sql)) {
 
+                        int count = 0;
                         while (rs.next()) {
+                            count++;
                             JsonObject azs = new JsonObject();
                             azs.addProperty("id", rs.getInt("id"));
                             azs.addProperty("name", rs.getString("name"));
                             azs.addProperty("address", rs.getString("address"));
                             azs.addProperty("nozzle_count", rs.getInt("nozzle_count"));
                             azsList.add(azs);
+
+                            System.out.println("📋 АЗС " + count + ": " + rs.getString("name") +
+                                    " (" + rs.getString("address") + ")");
                         }
+
+                        System.out.println("📋 Всего АЗС: " + count);
+                    } catch (SQLException e) {
+                        System.err.println("❌ Ошибка SQL: " + e.getMessage());
+                        e.printStackTrace();
+                        sendError(exchange, 500, "Ошибка базы данных: " + e.getMessage());
+                        return;
                     }
 
                     JsonObject response = new JsonObject();
                     response.addProperty("success", true);
                     response.add("data", azsList);
+                    response.addProperty("count", azsList.size());
+                    response.addProperty("status", 200);
+
                     sendJsonResponse(exchange, 200, response);
 
-                } else if ("POST".equals(exchange.getRequestMethod())) {
-                    String requestBody = readRequestBody(exchange);
-                    JsonObject json = gson.fromJson(requestBody, JsonObject.class);
-
-                    String name = json.get("name").getAsString();
-                    String address = json.get("address").getAsString();
-                    int nozzle = json.get("nozzle_count").getAsInt();
-
-                    String result = newAZS(name, address, nozzle);
-                    JsonObject response = new JsonObject();
-                    response.addProperty("success", true);
-                    response.addProperty("message", result);
-
-                    sendJsonResponse(exchange, 201, response);
                 } else {
                     sendError(exchange, 405, "Метод не поддерживается");
                 }
             } catch (Exception e) {
-                sendError(exchange, 500, "Ошибка: " + e.getMessage());
+                System.err.println("❌ Неожиданная ошибка в AzsHandler: " + e.getMessage());
+                e.printStackTrace();
+                sendError(exchange, 500, "Внутренняя ошибка сервера: " + e.getMessage());
             }
         }
     }
@@ -793,6 +1453,15 @@ public class ServerManager {
     static class TransactionsHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            if ("OPTIONS".equals(exchange.getRequestMethod())) {
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, X-Requested-With");
+                exchange.getResponseHeaders().set("Access-Control-Max-Age", "86400");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
             try {
                 if ("POST".equals(exchange.getRequestMethod())) {
                     String requestBody = readRequestBody(exchange);
@@ -826,59 +1495,58 @@ public class ServerManager {
         }
 
         private boolean saveTransaction(JsonObject transaction) {
-            String sql = "INSERT INTO transactions (" +
-                    "fuel_id, user_id, azs_id, nozzle, fuel_type, " +
-                    "liters, price_per_liter, total_amount, cash_in, " +
-                    "change, bonus_amount, bonus_spent, payment_method, status, created_at" +
-                    ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            try {
+                // Упрощенный SQL запрос без fuel_id
+                String sql = "INSERT INTO transactions (" +
+                        "user_id, azs_id, nozzle, fuel_type, " +
+                        "liters, price_per_liter, total_amount, cash_in, " +
+                        "change, bonus_amount, bonus_spent, payment_method, status, created_at" +
+                        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-            try (PreparedStatement pstmt = getConnection().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-                pstmt.setInt(1, transaction.get("fuel_id").getAsInt());
-                pstmt.setInt(2, transaction.get("user_id").getAsInt());
-                pstmt.setInt(3, transaction.get("azs_id").getAsInt());
-                pstmt.setInt(4, transaction.get("nozzle").getAsInt());
-                pstmt.setString(5, transaction.get("fuel_type").getAsString());
-                pstmt.setDouble(6, transaction.get("liters").getAsDouble());
-                pstmt.setDouble(7, transaction.get("price_per_liter").getAsDouble());
-                pstmt.setDouble(8, transaction.get("total_amount").getAsDouble());
-                pstmt.setDouble(9, transaction.get("cash_in").getAsDouble());
-                pstmt.setDouble(10, transaction.get("change").getAsDouble());
-                pstmt.setDouble(11, transaction.get("bonus_spent").getAsDouble()); // Для bonus_amount
-                pstmt.setDouble(12, transaction.get("bonus_spent").getAsDouble()); // Для bonus_spent
-                pstmt.setString(13, transaction.get("payment_method").getAsString());
-                pstmt.setString(14, transaction.get("status").getAsString());
+                try (PreparedStatement pstmt = getConnection().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                    pstmt.setInt(1, transaction.get("user_id").getAsInt());
+                    pstmt.setInt(2, transaction.get("azs_id").getAsInt());
+                    pstmt.setInt(3, transaction.get("nozzle").getAsInt());
+                    pstmt.setString(4, transaction.get("fuel_type").getAsString());
+                    pstmt.setDouble(5, transaction.get("liters").getAsDouble());
+                    pstmt.setDouble(6, transaction.get("price_per_liter").getAsDouble());
+                    pstmt.setDouble(7, transaction.get("total_amount").getAsDouble());
+                    pstmt.setDouble(8, transaction.get("cash_in").getAsDouble());
+                    pstmt.setDouble(9, transaction.get("change").getAsDouble());
+                    pstmt.setDouble(10, transaction.get("bonus_spent").getAsDouble()); // Для bonus_amount
+                    pstmt.setDouble(11, transaction.get("bonus_spent").getAsDouble()); // Для bonus_spent
+                    pstmt.setString(12, transaction.get("payment_method").getAsString());
+                    pstmt.setString(13, transaction.get("status").getAsString());
 
-                // Преобразуем строку даты в Timestamp
-                String createdAtStr = transaction.get("created_at").getAsString();
-                java.time.LocalDateTime localDateTime = java.time.LocalDateTime.parse(createdAtStr);
-                pstmt.setTimestamp(15, java.sql.Timestamp.valueOf(localDateTime));
+                    // Используем текущее время сервера
+                    pstmt.setTimestamp(14, new java.sql.Timestamp(System.currentTimeMillis()));
 
-                int rowsAffected = pstmt.executeUpdate();
+                    int rowsAffected = pstmt.executeUpdate();
 
-                if (rowsAffected > 0) {
-                    // Получаем ID созданной транзакции
-                    ResultSet generatedKeys = pstmt.getGeneratedKeys();
-                    if (generatedKeys.next()) {
-                        int transactionId = generatedKeys.getInt(1);
-                        transaction.addProperty("id", transactionId);
-                        System.out.println("✅ Транзакция сохранена с ID: " + transactionId);
+                    if (rowsAffected > 0) {
+                        // Получаем ID созданной транзакции
+                        ResultSet generatedKeys = pstmt.getGeneratedKeys();
+                        if (generatedKeys.next()) {
+                            int transactionId = generatedKeys.getInt(1);
+                            transaction.addProperty("id", transactionId);
+                            System.out.println("✅ Транзакция сохранена с ID: " + transactionId);
+                        }
+
+                        // Обновляем статистику пользователя если это не гость
+                        int userId = transaction.get("user_id").getAsInt();
+                        if (userId > 0) {
+                            updateUserStats(userId, transaction);
+                        }
+
+                        System.out.println("✅ Транзакция сохранена в БД: " +
+                                transaction.get("fuel_type").getAsString() + " - " +
+                                transaction.get("liters").getAsDouble() + " л - " +
+                                transaction.get("total_amount").getAsDouble() + " BYN");
+                        return true;
                     }
-
-                    // Обновляем статистику пользователя если это не гость
-                    int userId = transaction.get("user_id").getAsInt();
-                    if (userId > 0) {
-                        updateUserStats(userId, transaction);
-                    }
-
-                    System.out.println("✅ Транзакция сохранена в БД: " +
-                            transaction.get("fuel_type").getAsString() + " - " +
-                            transaction.get("liters").getAsDouble() + " л - " +
-                            transaction.get("total_amount").getAsDouble() + " BYN");
-                    return true;
                 }
             } catch (SQLException e) {
                 System.err.println("❌ Ошибка SQL при сохранении транзакции: " + e.getMessage());
-                System.err.println("SQL запрос: " + sql);
                 e.printStackTrace();
             } catch (Exception e) {
                 System.err.println("❌ Общая ошибка при сохранении транзакции: " + e.getMessage());
@@ -887,6 +1555,31 @@ public class ServerManager {
 
             return false;
         }
+
+        // Добавить этот метод для получения ID топлива по названию
+        private int getFuelIdByName(String fuelName) {
+            String sql = "SELECT id FROM fuels WHERE name LIKE ?";
+
+            try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
+                // Преобразуем название топлива для поиска
+                String searchName = "%" + fuelName + "%";
+                pstmt.setString(1, searchName);
+
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    return rs.getInt("id");
+                } else {
+                    // Если не найдено, возвращаем значение по умолчанию
+                    System.out.println("⚠️ Топливо не найдено в БД: " + fuelName + ", используем ID=1");
+                    return 1; // Значение по умолчанию
+                }
+            } catch (SQLException e) {
+                System.err.println("❌ Ошибка получения ID топлива: " + e.getMessage());
+                return 1; // Значение по умолчанию в случае ошибки
+            }
+        }
+
+
 
         private void updateUserStats(int userId, JsonObject transaction) {
             String updateSql = "UPDATE users SET " +
@@ -913,12 +1606,23 @@ public class ServerManager {
                 e.printStackTrace();
             }
         }
+
     }
 
     // ========== ОБРАБОТЧИК ПОИСКА ПОЛЬЗОВАТЕЛЯ ПО ТЕЛЕФОНУ ==========
     static class UserSearchHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            // В начале метода handle каждого обработчика
+            if ("OPTIONS".equals(exchange.getRequestMethod())) {
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, X-Requested-With");
+                exchange.getResponseHeaders().set("Access-Control-Max-Age", "86400");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
             try {
                 String query = exchange.getRequestURI().getQuery();
                 System.out.println("🔍 Поиск пользователя по запросу: " + query);
@@ -999,6 +1703,16 @@ public class ServerManager {
     static class UserBalanceHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            // В начале метода handle каждого обработчика
+            if ("OPTIONS".equals(exchange.getRequestMethod())) {
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, X-Requested-With");
+                exchange.getResponseHeaders().set("Access-Control-Max-Age", "86400");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
             try {
                 // Извлекаем ID пользователя из URL
                 String path = exchange.getRequestURI().getPath();
@@ -1080,6 +1794,16 @@ public class ServerManager {
     static class ReceiptHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            // В начале метода handle каждого обработчика
+            if ("OPTIONS".equals(exchange.getRequestMethod())) {
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, X-Requested-With");
+                exchange.getResponseHeaders().set("Access-Control-Max-Age", "86400");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
             try {
                 if ("POST".equals(exchange.getRequestMethod())) {
                     String requestBody = readRequestBody(exchange);
@@ -1726,21 +2450,43 @@ public class ServerManager {
     }
 
     private static void sendJsonResponse(HttpExchange exchange, int statusCode, JsonObject response) throws IOException {
-        String responseJson = gson.toJson(response);
-        exchange.getResponseHeaders().set("Content-Type", "application/json");
-        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
-        exchange.sendResponseHeaders(statusCode, responseJson.getBytes().length);
+        try {
+            String responseJson = gson.toJson(response);
 
-        OutputStream os = exchange.getResponseBody();
-        os.write(responseJson.getBytes());
-        os.close();
+            // ВСЕГДА добавляем CORS заголовки
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, X-Requested-With");
+            exchange.getResponseHeaders().set("Access-Control-Max-Age", "86400");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
+
+            // Отправляем заголовки
+            exchange.sendResponseHeaders(statusCode, responseJson.getBytes().length);
+
+            // Отправляем тело ответа
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(responseJson.getBytes());
+            }
+
+            System.out.println("✅ Ответ отправлен: " + statusCode + " - " + responseJson);
+
+        } catch (Exception e) {
+            System.err.println("❌ Ошибка отправки ответа: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     private static void sendError(HttpExchange exchange, int statusCode, String message) throws IOException {
-        JsonObject error = new JsonObject();
-        error.addProperty("success", false);
-        error.addProperty("error", message);
-        sendJsonResponse(exchange, statusCode, error);
+        try {
+            JsonObject error = new JsonObject();
+            error.addProperty("success", false);
+            error.addProperty("error", message);
+            error.addProperty("status", statusCode);
+            sendJsonResponse(exchange, statusCode, error);
+        } catch (Exception e) {
+            System.err.println("❌ Ошибка отправки ошибки: " + e.getMessage());
+        }
     }
 
     // ========== МЕТОДЫ ДЛЯ СТАРОГО КОНСОЛЬНОГО ИНТЕРФЕЙСА ==========

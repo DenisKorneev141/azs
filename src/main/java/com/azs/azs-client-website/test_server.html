@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Тест сервера АЗС</title>
+    <script>
+        async function testEndpoint(endpoint, method = 'GET', data = null) {
+            const url = `http://localhost:8080${endpoint}`;
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            };
+            
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+            
+            try {
+                const response = await fetch(url, options);
+                const result = await response.json();
+                return {
+                    success: response.ok,
+                    status: response.status,
+                    data: result
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error.message
+                };
+            }
+        }
+        
+        async function runTests() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<h2>Результаты тестирования:</h2>';
+            
+            // Тест 1: Проверка здоровья сервера
+            results.innerHTML += '<h3>1. Тест /api/health</h3>';
+            const healthTest = await testEndpoint('/api/health');
+            results.innerHTML += `<div class="${healthTest.success ? 'success' : 'error'}">
+                ${JSON.stringify(healthTest, null, 2)}
+            </div>`;
+            
+            // Тест 2: Получение цен на топливо
+            results.innerHTML += '<h3>2. Тест /api/fuel</h3>';
+            const fuelTest = await testEndpoint('/api/fuel');
+            results.innerHTML += `<div class="${fuelTest.success ? 'success' : 'error'}">
+                ${JSON.stringify(fuelTest, null, 2)}
+            </div>`;
+            
+            // Тест 3: Получение списка АЗС
+            results.innerHTML += '<h3>3. Тест /api/azs</h3>';
+            const azsTest = await testEndpoint('/api/azs');
+            results.innerHTML += `<div class="${azsTest.success ? 'success' : 'error'}">
+                ${JSON.stringify(azsTest, null, 2)}
+            </div>`;
+            
+            // Тест 4: Регистрация тестового пользователя
+            results.innerHTML += '<h3>4. Тест регистрации /api/users/register</h3>';
+            const testUser = {
+                username: 'test' + Date.now(),
+                phone: '+37529' + Math.floor(Math.random() * 1000000),
+                name: 'Тестовый Пользователь',
+                password: 'test123'
+            };
+            const registerTest = await testEndpoint('/api/users/register', 'POST', testUser);
+            results.innerHTML += `<div class="${registerTest.success ? 'success' : 'error'}">
+                Данные: ${JSON.stringify(testUser, null, 2)}<br>
+                Результат: ${JSON.stringify(registerTest, null, 2)}
+            </div>`;
+            
+            // Тест 5: Вход пользователя
+            if (registerTest.success) {
+                results.innerHTML += '<h3>5. Тест входа /api/users/login</h3>';
+                const loginData = {
+                    phone: testUser.phone,
+                    password: testUser.password
+                };
+                const loginTest = await testEndpoint('/api/users/login', 'POST', loginData);
+                results.innerHTML += `<div class="${loginTest.success ? 'success' : 'error'}">
+                    Данные: ${JSON.stringify(loginData, null, 2)}<br>
+                    Результат: ${JSON.stringify(loginTest, null, 2)}
+                </div>`;
+            }
+        }
+    </script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .success { background: #d4edda; color: #155724; padding: 10px; margin: 5px 0; border-radius: 5px; }
+        .error { background: #f8d7da; color: #721c24; padding: 10px; margin: 5px 0; border-radius: 5px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>Тестирование сервера АЗС</h1>
+    <button onclick="runTests()">Запустить тесты</button>
+    <div id="results"></div>
+</body>
+</html>
