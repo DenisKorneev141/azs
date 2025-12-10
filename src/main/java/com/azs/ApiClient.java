@@ -216,6 +216,46 @@ public class ApiClient {
         });
     }
 
+    public static CompletableFuture<JsonObject> getQrCodeData(int azsId, int nozzleNumber) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                URL url = new URL(serverUrl + "/api/qr/" + azsId + "/" + nozzleNumber);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("Accept", "application/json");
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
+
+                int responseCode = conn.getResponseCode();
+                if (responseCode == 200) {
+                    try (BufferedReader br = new BufferedReader(
+                            new InputStreamReader(conn.getInputStream(), "utf-8"))) {
+
+                        StringBuilder response = new StringBuilder();
+                        String responseLine;
+                        while ((responseLine = br.readLine()) != null) {
+                            response.append(responseLine.trim());
+                        }
+
+                        JsonObject json = gson.fromJson(response.toString(), JsonObject.class);
+                        json.addProperty("success", true);
+                        return json;
+                    }
+                } else {
+                    JsonObject error = new JsonObject();
+                    error.addProperty("success", false);
+                    error.addProperty("message", "Ошибка: " + responseCode);
+                    return error;
+                }
+            } catch (Exception e) {
+                JsonObject error = new JsonObject();
+                error.addProperty("success", false);
+                error.addProperty("message", "Ошибка: " + e.getMessage());
+                return error;
+            }
+        });
+    }
+
     // НОВЫЙ МЕТОД: генерация чека
     public static CompletableFuture<JsonObject> generateReceipt(JsonObject transactionData) {
         return CompletableFuture.supplyAsync(() -> {

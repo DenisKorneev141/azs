@@ -4,13 +4,26 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
+import javafx.scene.image.ImageView;
+import javafx.scene.image.Image;
 import com.azs.ApiClient;
 import com.azs.model.UserSession;
+import com.azs.QrCodeUtils;
 import com.google.gson.JsonObject;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.TextArea;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Priority;
+import javafx.geometry.Insets;
+import javafx.scene.control.ButtonBar;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
 
 public class NozzlesController {
     @FXML private Label nozzle1StatusLabel;
@@ -32,8 +45,6 @@ public class NozzlesController {
     @FXML private Button nozzle2ToggleButton;
     @FXML private Button nozzle3ToggleButton;
     @FXML private Button nozzle4ToggleButton;
-
-    //@FXML private Button addNozzleButton;
 
     private int azsId;
     private JsonObject nozzlesData;
@@ -59,8 +70,6 @@ public class NozzlesController {
         nozzle2QrButton.setOnAction(e -> showQrCode(2));
         nozzle3QrButton.setOnAction(e -> showQrCode(3));
         nozzle4QrButton.setOnAction(e -> showQrCode(4));
-
-        //addNozzleButton.setOnAction(e -> addNewNozzle());
     }
 
     private void loadNozzlesData() {
@@ -132,20 +141,8 @@ public class NozzlesController {
         Button toggleButton = getToggleButton(nozzleNumber);
         VBox nozzleBox = getNozzleBox(nozzleNumber);
 
-        if (statusLabel == null) {
-            System.err.println("Не найден statusLabel для колонки " + nozzleNumber);
-            return;
-        }
-        if (qrButton == null) {
-            System.err.println("Не найден qrButton для колонки " + nozzleNumber);
-            return;
-        }
-        if (toggleButton == null) {
-            System.err.println("Не найден toggleButton для колонки " + nozzleNumber);
-            return;
-        }
-        if (nozzleBox == null) {
-            System.err.println("Не найден nozzleBox для колонки " + nozzleNumber);
+        if (statusLabel == null || qrButton == null || toggleButton == null || nozzleBox == null) {
+            System.err.println("Не найдены элементы UI для колонки " + nozzleNumber);
             return;
         }
 
@@ -156,7 +153,7 @@ public class NozzlesController {
                 statusLabel.setText("Активна");
                 statusLabel.setStyle("-fx-text-fill: #27ae60; -fx-font-weight: bold; -fx-font-size: 24;");
                 toggleButton.setText("Деактивировать");
-                toggleButton.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6; ");
+                toggleButton.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6;");
                 toggleButton.setOnAction(e -> toggleNozzleStatus(nozzleNumber, "not_active"));
                 break;
 
@@ -224,18 +221,121 @@ public class NozzlesController {
     }
 
     private void showQrCode(int nozzleNumber) {
-        System.out.println("Показать QR-код для колонки " + nozzleNumber);
-        // TODO: Реализовать показ QR-кода
-        showInfo("QR-код",
-                "QR-код для колонки №" + nozzleNumber +
-                        "\nАЗС: " + UserSession.getAzsName());
+        System.out.println("🔗 Показать QR-код для колонки " + nozzleNumber);
+
+        // Проверяем доступность колонки
+        String columnName = "nozzle_" + nozzleNumber;
+        if (nozzlesData == null || !nozzlesData.has(columnName) ||
+                "not_available".equals(nozzlesData.get(columnName).getAsString())) {
+            showError("QR-код недоступен", "Колонка №" + nozzleNumber + " не доступна");
+            return;
+        }
+
+        // Получаем данные с сервера
+        CompletableFuture<JsonObject> future = ApiClient.getQrCodeData(azsId, nozzleNumber);
+
+        future.thenAccept(response -> {
+            Platform.runLater(() -> {
+                if (response.get("success").getAsBoolean()) {
+                    // Получаем текст для QR-кода
+                    String qrText = response.get("qr_text").getAsString();
+                    String azsName = response.get("azs_name").getAsString();
+
+                    // Генерируем и показываем QR-код
+                    showQrCodeDialog(nozzleNumber, qrText, azsName);
+                } else {
+                    // Используем локальные данные
+                    String azsName = UserSession.getAzsName();
+                    String qrText = QrCodeUtils.generateQrText(azsId, nozzleNumber, azsName);
+                    showQrCodeDialog(nozzleNumber, qrText, azsName);
+                }
+            });
+        }).exceptionally(e -> {
+            Platform.runLater(() -> {
+                // Используем локальные данные
+                String azsName = UserSession.getAzsName();
+                String qrText = QrCodeUtils.generateQrText(azsId, nozzleNumber, azsName);
+                showQrCodeDialog(nozzleNumber, qrText, azsName);
+            });
+            return null;
+        });
     }
 
-    private void addNewNozzle() {
-        System.out.println("Добавить новую колонку");
-        // TODO: Реализовать добавление новой колонки
-        showInfo("Добавление колонки",
-                "Функция добавления новой колонки будет доступна в следующем обновлении");
+    private void showQrCodeDialog(int nozzleNumber, String qrText, String azsName) {
+        // Создаем простое диалоговое окно
+        Alert alert = new Alert(AlertType.INFORMATION);
+        alert.setTitle("QR-код для колонки №" + nozzleNumber);
+        alert.setHeaderText("АЗС: " + azsName + " | Колонка: " + nozzleNumber);
+
+
+        Image qrImage = QrCodeUtils.generateQrCodeImage(qrText, 250);
+        ImageView qrImageView = new ImageView(qrImage);
+        qrImageView.setFitWidth(250);
+        qrImageView.setFitHeight(250);
+        qrImageView.setPreserveRatio(true);
+
+        // Простое текстовое описание
+        String info = "✅ QR-код готов к сканированию\n\n" +
+                "Данные для клиента:\n" +
+                "• АЗС: " + azsName + "\n" +
+                "• Колонка: №" + nozzleNumber + "\n" +
+                "• Время: " +
+                new java.text.SimpleDateFormat("HH:mm").format(new java.util.Date());
+
+        // Создаем простой layout
+        VBox content = new VBox(10);
+        content.setPadding(new Insets(10));
+        content.getChildren().addAll(qrImageView, new Label(info));
+
+        // Добавляем кнопки
+        ButtonType copyButton = new ButtonType("Копировать", ButtonBar.ButtonData.OK_DONE);
+        ButtonType closeButton = new ButtonType("Закрыть", ButtonBar.ButtonData.CANCEL_CLOSE);
+        alert.getButtonTypes().setAll(copyButton, closeButton);
+
+        // Устанавливаем контент
+        alert.getDialogPane().setContent(content);
+        alert.getDialogPane().setPrefSize(300, 400);
+
+        // Обработка кнопки "Копировать"
+        alert.showAndWait().ifPresent(response -> {
+            if (response == copyButton) {
+                copyToClipboard(qrText);
+                showInfo("Скопировано", "Данные QR-кода скопированы");
+            }
+        });
+    }
+
+
+
+    private void copyToClipboard(String text) {
+        try {
+            StringSelection selection = new StringSelection(text);
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, null);
+            System.out.println("✅ Текст скопирован в буфер обмена");
+        } catch (Exception e) {
+            System.err.println("❌ Ошибка копирования в буфер обмена: " + e.getMessage());
+            showError("Ошибка", "Не удалось скопировать текст в буфер обмена");
+        }
+    }
+
+    private void saveQrCodeToFile(String qrText, int nozzleNumber, String azsName) {
+        try {
+            // Создаем имя файла
+            String filename = String.format("qr_azs%d_nozzle%d_%s.png",
+                    azsId, nozzleNumber,
+                    new java.text.SimpleDateFormat("yyyyMMdd_HHmmss").format(new java.util.Date()));
+
+            // Генерируем и сохраняем НАСТОЯЩИЙ QR-код
+            QrCodeUtils.saveQrCodeToFile(qrText, 400, filename);
+
+            showSuccess("QR-код сохранен",
+                    "QR-код сохранен в файл: " + filename +
+                            "\nФайл находится в папке с программой.");
+
+        } catch (Exception e) {
+            System.err.println("❌ Ошибка сохранения QR-кода: " + e.getMessage());
+            showError("Ошибка", "Не удалось сохранить QR-код в файл: " + e.getMessage());
+        }
     }
 
     // Методы для получения элементов UI
@@ -301,6 +401,7 @@ public class NozzlesController {
         nozzlesData = defaultData;
         updateUI();
     }
+
 
     // Вспомогательные методы для показа сообщений
     private void showError(String title, String message) {

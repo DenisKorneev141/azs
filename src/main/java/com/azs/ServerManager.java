@@ -37,7 +37,15 @@ public class ServerManager {
             server.createContext("/api/azs", new AzsHandler());
             server.createContext("/api/reports", new ReportsHandler());
             server.createContext("/api/fuel", new FuelHandler());
+            // ДОБАВЬТЕ ЭТО В ServerManager.java в метод startServer() после других контекстов:
+            server.createContext("/api/users/register", new UserRegistrationHandler());
+            server.createContext("/api/users/login", new UserLoginHandler());
+            server.createContext("/api/users/profile", new UserProfileHandler());
+            server.createContext("/api/users/transactions", new UserTransactionsHandler());
+            server.createContext("/api/users/update", new UserUpdateHandler());
+            server.createContext("/api/qr/generate", new QrGenerateHandler());
             server.createContext("/api/operators", new OperatorsHandler());
+            server.createContext("/api/qr/", new QrCodeHandler());
             server.createContext("/api/users", new UsersHandler());
             server.createContext("/api/transactions/recent", new RecentTransactionsHandler());
 
@@ -417,6 +425,103 @@ public class ServerManager {
             response.addProperty("status", "OK");
             response.addProperty("timestamp", System.currentTimeMillis());
             sendJsonResponse(exchange, 200, response);
+        }
+    }
+
+    // ========== ОБРАБОТЧИК QR-КОДОВ (УПРОЩЕННЫЙ) ==========
+    static class QrCodeHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            try {
+                String path = exchange.getRequestURI().getPath();
+                System.out.println("🔗 Запрос QR-кода: " + path);
+
+                // Пример: /api/qr/1/2 (АЗС ID=1, Колонка=2)
+                String[] parts = path.split("/");
+
+                if (parts.length != 5) {
+                    sendError(exchange, 400, "Неверный URL формат. Нужно: /api/qr/{azs_id}/{nozzle}");
+                    return;
+                }
+
+                int azsId = Integer.parseInt(parts[3]);
+                int nozzleNumber = Integer.parseInt(parts[4]);
+
+                System.out.println("🔗 Генерация QR для АЗС " + azsId + ", колонка " + nozzleNumber);
+
+                // Простая проверка существования АЗС
+                JsonObject azsInfo = getAzsInfo(azsId);
+
+                if (!azsInfo.get("success").getAsBoolean()) {
+                    sendError(exchange, 404, "АЗС не найдена");
+                    return;
+                }
+
+                // Генерируем простую текстовую информацию для QR
+                String qrText = generateQrText(azsId, nozzleNumber, azsInfo);
+
+                JsonObject response = new JsonObject();
+                response.addProperty("success", true);
+                response.addProperty("qr_text", qrText);
+                response.addProperty("azs_id", azsId);
+                response.addProperty("nozzle_number", nozzleNumber);
+                response.addProperty("azs_name", azsInfo.get("name").getAsString());
+                response.addProperty("address", azsInfo.get("address").getAsString());
+                response.addProperty("timestamp", System.currentTimeMillis());
+
+                sendJsonResponse(exchange, 200, response);
+
+            } catch (NumberFormatException e) {
+                sendError(exchange, 400, "Некорректный числовой параметр");
+            } catch (Exception e) {
+                System.err.println("❌ Ошибка в QrCodeHandler: " + e.getMessage());
+                e.printStackTrace();
+                sendError(exchange, 500, "Ошибка: " + e.getMessage());
+            }
+        }
+
+        private JsonObject getAzsInfo(int azsId) throws SQLException {
+            JsonObject result = new JsonObject();
+
+            String sql = "SELECT name, address FROM azs WHERE id = ?";
+            try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
+                pstmt.setInt(1, azsId);
+                ResultSet rs = pstmt.executeQuery();
+
+                if (rs.next()) {
+                    result.addProperty("success", true);
+                    result.addProperty("name", rs.getString("name"));
+                    result.addProperty("address", rs.getString("address"));
+                } else {
+                    result.addProperty("success", false);
+                    result.addProperty("error", "АЗС не найдена");
+                }
+            }
+
+            return result;
+        }
+
+        private String generateQrText(int azsId, int nozzleNumber, JsonObject azsInfo) {
+            // Формируем текст для QR-кода
+            // Это просто текст, который потом можно будет использовать на сайте
+            return String.format(
+                    "АЗС: %s\n" +
+                            "Адрес: %s\n" +
+                            "Колонка: %d\n" +
+                            "ID АЗС: %d\n" +
+                            "ID Колонки: %d\n" +
+                            "Время: %s\n" +
+                            "Тип: QR для заправки\n" +
+                            "Данные для сайта: azs_id=%d&nozzle=%d",
+                    azsInfo.get("name").getAsString(),
+                    azsInfo.get("address").getAsString(),
+                    nozzleNumber,
+                    azsId,
+                    nozzleNumber,
+                    new java.util.Date().toString(),
+                    azsId,
+                    nozzleNumber
+            );
         }
     }
 

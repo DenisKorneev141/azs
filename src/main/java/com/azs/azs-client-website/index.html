@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>АЗС Phaeton - Клиентское приложение</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@latest/build/qrcode.min.js"></script>
+</head>
+<body>
+    <!-- Шапка сайта -->
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-gas-pump"></i>
+                <h1>АЗС <span class="highlight">Phaeton</span></h1>
+            </div>
+            
+            <nav class="nav">
+                <ul>
+                    <li><a href="#" class="active" data-page="home"><i class="fas fa-home"></i> Главная</a></li>
+                    <li><a href="#" data-page="fuel"><i class="fas fa-oil-can"></i> Топливо</a></li>
+                    <li><a href="#" data-page="payment"><i class="fas fa-qrcode"></i> Оплата QR</a></li>
+                    <li><a href="#" data-page="stations"><i class="fas fa-map-marker-alt"></i> АЗС на карте</a></li>
+                    <li><a href="#" data-page="profile"><i class="fas fa-user"></i> Профиль</a></li>
+                </ul>
+            </nav>
+            
+            <div class="auth-buttons" id="authButtons">
+                <button class="btn btn-outline" id="loginBtn">Войти</button>
+                <button class="btn btn-primary" id="registerBtn">Регистрация</button>
+            </div>
+            
+            <div class="user-info" id="userInfo" style="display: none;">
+                <div class="user-greeting">
+                    <i class="fas fa-user-circle"></i>
+                    <span id="userName">Иван Иванов</span>
+                </div>
+                <div class="user-balance">
+                    <i class="fas fa-coins"></i>
+                    <span id="userBalance">0.00 бонусов</span>
+                </div>
+                <button class="btn btn-logout" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Основной контент -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Баннер -->
+            <section class="hero-banner">
+                <div class="hero-content">
+                    <h2>Заправка стала проще</h2>
+                    <p>Быстрая оплата QR-кодом, бонусная система и удобный сервис</p>
+                    <div class="hero-stats">
+                        <div class="stat">
+                            <i class="fas fa-gas-pump"></i>
+                            <div>
+                                <h3>5+</h3>
+                                <p>Видов топлива</p>
+                            </div>
+                        </div>
+                        <div class="stat">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <div>
+                                <h3>10+</h3>
+                                <p>АЗС в сети</p>
+                            </div>
+                        </div>
+                        <div class="stat">
+                            <i class="fas fa-users"></i>
+                            <div>
+                                <h3>1000+</h3>
+                                <p>Довольных клиентов</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-image">
+                    <img src="assets/images/fuel-station.svg" alt="АЗС">
+                </div>
+            </section>
+
+            <!-- Блок с ценами на топливо -->
+            <section id="fuelSection" class="section">
+                <h2 class="section-title">Цены на топливо</h2>
+                <div class="fuel-prices" id="fuelPrices">
+                    <!-- Динамически загружаемые цены -->
+                </div>
+            </section>
+
+            <!-- Блок оплаты QR-кодом -->
+            <section id="paymentSection" class="section">
+                <h2 class="section-title">Оплата QR-кодом</h2>
+                <div class="qr-payment">
+                    <div class="qr-container">
+                        <div id="qrCode"></div>
+                        <p class="qr-info">Отсканируйте код на колонке для начала заправки</p>
+                    </div>
+                    <div class="qr-instructions">
+                        <h3>Как это работает:</h3>
+                        <ol>
+                            <li>Подойдите к колонке АЗС</li>
+                            <li>Отсканируйте QR-код на колонке</li>
+                            <li>Выберите тип и количество топлива</li>
+                            <li>Оплатите удобным способом</li>
+                            <li>Начните заправку</li>
+                        </ol>
+                        <button class="btn btn-primary btn-large" id="scanQrBtn">
+                            <i class="fas fa-camera"></i> Сканировать QR
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Карта АЗС -->
+            <section id="stationsSection" class="section">
+                <h2 class="section-title">Наши АЗС на карте</h2>
+                <div class="map-container">
+                    <div id="map"></div>
+                    <div class="stations-list" id="stationsList">
+                        <!-- Динамически загружаемые АЗС -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Профиль пользователя -->
+            <section id="profileSection" class="section" style="display: none;">
+                <div class="profile-container">
+                    <div class="profile-sidebar">
+                        <div class="profile-avatar">
+                            <i class="fas fa-user-circle"></i>
+                            <h3 id="profileName">Гость</h3>
+                        </div>
+                        <ul class="profile-menu">
+                            <li class="active"><a href="#" data-tab="profile"><i class="fas fa-user"></i> Профиль</a></li>
+                            <li><a href="#" data-tab="transactions"><i class="fas fa-history"></i> История</a></li>
+                            <li><a href="#" data-tab="bonuses"><i class="fas fa-coins"></i> Бонусы</a></li>
+                            <li><a href="#" data-tab="settings"><i class="fas fa-cog"></i> Настройки</a></li>
+                        </ul>
+                    </div>
+                    <div class="profile-content">
+                        <!-- Контент будет загружаться динамически -->
+                        <div id="profileTabContent">
+                            <!-- Динамический контент -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Футер -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>АЗС Phaeton</h3>
+                    <p>Качество топлива и сервиса на высшем уровне</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-vk"></i></a>
+                        <a href="#"><i class="fab fa-telegram"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h3>Контакты</h3>
+                    <p><i class="fas fa-phone"></i> +7 (999) 123-45-67</p>
+                    <p><i class="fas fa-envelope"></i> info@azs-phaeton.ru</p>
+                    <p><i class="fas fa-clock"></i> Круглосуточно</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Скачайте наше приложение</h3>
+                    <div class="app-download">
+                        <button class="btn-app">
+                            <i class="fab fa-google-play"></i> Google Play
+                        </button>
+                        <button class="btn-app">
+                            <i class="fab fa-app-store"></i> App Store
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 АЗС Phaeton. Все права защищены.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Модальные окна -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Вход в систему</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginPhone">Номер телефона</label>
+                    <input type="tel" id="loginPhone" required placeholder="+7 (999) 123-45-67">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Пароль</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Войти</button>
+                <p class="form-link">Нет аккаунта? <a href="#" id="showRegister">Зарегистрироваться</a></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Регистрация</h2>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="regName">ФИО</label>
+                    <input type="text" id="regName" required placeholder="Иванов Иван Иванович">
+                </div>
+                <div class="form-group">
+                    <label for="regPhone">Номер телефона</label>
+                    <input type="tel" id="regPhone" required placeholder="+7 (999) 123-45-67">
+                </div>
+                <div class="form-group">
+                    <label for="regPassword">Пароль</label>
+                    <input type="password" id="regPassword" required>
+                </div>
+                <div class="form-group">
+                    <label for="regPasswordConfirm">Подтвердите пароль</label>
+                    <input type="password" id="regPasswordConfirm" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Зарегистрироваться</button>
+                <p class="form-link">Уже есть аккаунт? <a href="#" id="showLogin">Войти</a></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="paymentModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Оплата заправки</h2>
+            <div id="paymentContent">
+                <!-- Динамический контент оплаты -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключение скриптов -->
+    <script src="api/client.js"></script>
+    <script src="api/qr.js"></script>
+    <script src="auth.js"></script>
+    <script src="payment.js"></script>
+    <script src="profile.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
